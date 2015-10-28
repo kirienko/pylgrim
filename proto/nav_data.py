@@ -1,9 +1,12 @@
 #!/usr/bin/python
 #! encoding: UTF8
-__author__ = 'kirienko'
 
+from time import mktime, time
 import datetime as dt
 from math import sqrt, sin, cos, atan2
+
+__author__ = 'kirienko'
+
 
 """
 Prototype of RINEX navigation file parser
@@ -16,6 +19,27 @@ References:
     http://ru.bookzz.org/book/2086274/def272
 
 """
+
+def get_gps_week_number(now = None):
+    """
+    :returns GPS week number from UNIX time, or datetime timetuple;
+        if argument is None returns the number of current week
+    """
+    unix_to_gps = 315964800
+    if isinstance(now, dt.datetime):
+        ## suppose datetime timetuple
+        now = int(mktime(now.timetuple()))
+    elif isinstance(now,int) and now > unix_to_gps:
+        ## suppose timestamp
+        pass
+        #return (now - unix_to_gps)/(60*60*24*7)
+    elif now is None:
+        now = int(time())
+        #return (now - unix_to_gps)/(60*60*24*7)
+    else:
+        print "\n\tError: cannot determine GPS week"
+        exit(1)
+    return (now - unix_to_gps)/(60*60*24*7)
 
 mu = 3.986005E14                # WGS84 value of Earth’s universal gravitational parameter [m/s]
 c = 2.99792458E8                # GPS value for speed of light [m³/s²]
@@ -36,11 +60,14 @@ class Nav():
         sec_msec = "%.3f" % float(self.raw_data[6])
         s,ms = map(int,sec_msec.split('.'))
         self.date = dt.datetime(*(map(int,self.raw_data[1:6])+[s,ms]))
+        # self.week = get_gps_week_number(self.date)    # do we need this?
 
         self.A   = map(float,self.raw_data[7:10])
         self.eph = map(float,self.raw_data[11:27])  # broadcast ephemeris
+        self.epoch = self.date - dt.timedelta(seconds=self.eph[7]) # beginning of current GPS week
+        self.now = self.date - self.epoch
 
-    def eph2pos(self,t):
+    def eph2pos(self):
         """
         Computes satellite position (ECEF) and clock bias from broadcast ephemeris.\
         See [1], Table 4.1 (p. 117) and Table 4.2 (p. 118)
@@ -53,7 +80,7 @@ class Nav():
         e         = self.eph[4]     # Eccentricity
         C_us      = self.eph[5]     # Amplitude of sine correction to argument of latitude
         sqrt_a    = self.eph[6]     # Square root of semimajor axis
-        t_0e      = self.eph[7]     # Reference time of ephemeris
+        t_0e      = self.eph[7]     # Reference time of ephemeris from the beginning of GPS week
         C_ic      = self.eph[8]     # Amplitude of cosine correction to inclination angle
         Omega     = self.eph[9]     # Ω₀ - Longitude of the ascending node (at weekly epoch)
         C_is      = self.eph[10]    # Amplitude of sine correction to inclination angle
@@ -65,7 +92,8 @@ class Nav():
 
         a = sqrt_a**2           # print " 1) a = (⎷a)² = %.1f [m]" % a
         n = sqrt(mu/a**3) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
-        t_k = t - t_0e          # print " 3) tₖ = t - t_0e = %f [s]" % t_k.seconds
+        t_k = self.now - t_0e          # Time from ephemeris epoch
+        # print " 3) tₖ = t - t_0e = %f [s]" % t_k.seconds
         M_k = M_0 + n * t_k     # print " 4) Mₖ  = M₀  + (n)(tₖ) = %f " % M_k
         E = M_k
         for j in xrange(5):
@@ -85,7 +113,7 @@ class Nav():
         # print "12) rₖ = a (1 − e cos(Eₖ)) + δrₖ = %.1f [m]" % r_k
         i_k = i_0 + IDOT * t_k + d_i
         # print "13) iₖ = i₀ + (di/dt)tₖ  + δiₖ = %f " % i_k
-        Omega_k = Omega + (Omega_dot-Omega_dot_e)*t_k + Omega_dot_e*t_0e
+        Omega_k = Omega + (Omega_dot-Omega_dot_e)*t_k + Omega_dot_e*t_0e #TODO
         # print "14) Ωₖ = Ω₀ + (Ω̇ - Ω̇ₑ)tₖ  + Ω̇ₑ t₀ₑ = %f " % Omega_k
         x_prime_k = r_k * cos(u_k)  # print "15) x̕ₖ= rₖ cos(uₖ) = %f" % x_prime_k
         y_prime_k = r_k * sin(u_k)  # print "16) y̕ₖ= rₖ sin(uₖ) = %f" % y_prime_k

@@ -3,7 +3,12 @@
 
 from time import mktime, time
 import datetime as dt
+import numpy as np
 from math import sqrt, sin, cos, atan2
+
+# Origin of GPS time
+ori = dt.datetime(year=1980,month=1,day=6,
+                  hour=0,minute=0,second=0,microsecond=0)
 
 __author__ = 'kirienko'
 
@@ -20,80 +25,77 @@ References:
 
 """
 
-def get_gps_week_number(now = None):
-    """
-    :returns GPS week number from UNIX time, or datetime timetuple;
-        if argument is None returns the number of current week
-    """
-    unix_to_gps = 315964800
-    if isinstance(now, dt.datetime):
-        ## suppose datetime timetuple
-        now = int(mktime(now.timetuple()))
-    elif isinstance(now,int) and now > unix_to_gps:
-        ## suppose timestamp
-        pass
-        #return (now - unix_to_gps)/(60*60*24*7)
-    elif now is None:
-        now = int(time())
-        #return (now - unix_to_gps)/(60*60*24*7)
-    else:
-        print "\n\tError: cannot determine GPS week"
-        exit(1)
-    return (now - unix_to_gps)/(60*60*24*7)
 
 mu = 3.986005E14                # WGS84 value of Earth’s universal gravitational parameter [m/s]
 c = 2.99792458E8                # GPS value for speed of light [m³/s²]
 Omega_dot_e = 7.2921151467/1E5  # WGS84 value of Earth’s rotation rate [rad/s]
 
+
 class Nav():
-    def __init__(self, data):
+    def __init__(self,data):
+        """
+        Base navigation class that contains raw data, date and PRN number.
+        It also has self.A tuple with three elements, but it is important to remember
+                that these elements have different meaning for GPL and GLO.
+
+        :param data: lines of observation data: 8 for GPS, 4 for GLO
+        :param type: type of GNSS: either 'gps', or 'glo'
+        :return:
+        """
         self.raw_data = []
         self.raw_data += data[0][:22].split()   # <-- date
         self.raw_data +=[data[0][22+19*i:22+19*(i+1)] for i in range(3)]
         for d in data[1:]:
             self.raw_data += [d[3+i*19:3+(i+1)*19] for i in range(4)]
         self.raw_data = [d.replace('D','E') for d in self.raw_data]
+        self.A   = map(float,self.raw_data[7:10])
         self.PRN_number = int(self.raw_data[0])
 
         # Time of the observation
         if int(self.raw_data[1]) < 2000: self.raw_data[1] = '20' + self.raw_data[1]
         sec_msec = "%.3f" % float(self.raw_data[6])
         s,ms = map(int,sec_msec.split('.'))
-        self.date = dt.datetime(*(map(int,self.raw_data[1:6])+[s,ms]))
-        # self.week = get_gps_week_number(self.date)    # do we need this?
+        self.date = dt.datetime(*(map(int,self.raw_data[1:6])+[s,ms]))  # t_oc
 
-        self.A   = map(float,self.raw_data[7:10])
-        self.eph = map(float,self.raw_data[11:27])  # broadcast ephemeris
-        self.epoch = self.date - dt.timedelta(seconds=self.eph[7]) # beginning of current GPS week
-        self.now = self.date - self.epoch
+        try:
+            self.eph = map(float,self.raw_data[10:27])  # broadcast ephemeris
+            self.week = int(float(self.raw_data[28]))    # GPS week
+            self.epoch = ori + dt.timedelta(days=self.week*7)
+        except IndexError:
+            pass
 
-    def eph2pos(self):
+
+class NavGPS(Nav):
+
+    def eph2pos(self, t):
         """
-        Computes satellite position (ECEF) and clock bias from broadcast ephemeris.\
+        Computes satellite position (ECEF) and clock bias from broadcast ephemeris.
         See [1], Table 4.1 (p. 117) and Table 4.2 (p. 118)
-        :return:
+        :param:  t = time of measurement (to be converted to seconds from t_oe)
+        :return: r = [Xₖ, Yₖ, Zₖ] - coordinates of satellite in ECEF
         """
-        C_rs      = self.eph[0]     # Amplitude of sine correction to orbital radius
-        delta_n   = self.eph[1]     # Δn - Mean motion correction [rad/s]
-        M_0       = self.eph[2]     # M₀ - Mean anomaly (at time t_0e )
-        C_uc      = self.eph[3]     # Amplitude of cosine correction to argument of latitude
-        e         = self.eph[4]     # Eccentricity
-        C_us      = self.eph[5]     # Amplitude of sine correction to argument of latitude
-        sqrt_a    = self.eph[6]     # Square root of semimajor axis
-        t_0e      = self.eph[7]     # Reference time of ephemeris from the beginning of GPS week
-        C_ic      = self.eph[8]     # Amplitude of cosine correction to inclination angle
-        Omega     = self.eph[9]     # Ω₀ - Longitude of the ascending node (at weekly epoch)
-        C_is      = self.eph[10]    # Amplitude of sine correction to inclination angle
-        i_0       = self.eph[11]    # i₀ - Inclination angle (at time t_0e)
-        C_rc      = self.eph[12]    # Amplitude of cosine correction to orbital radius
-        omega     = self.eph[13]    # ω - Argument of perigee (at time t_0e)
-        Omega_dot = self.eph[14]    # dΩ/dt - Rate of change of longitude of the ascending node
-        IDOT      = self.eph[15]    # Rate of change of inclination angle (i.e., di/dt)
+        IODE      = self.eph[0]     # Amplitude of sine correction to orbital radius
+        C_rs      = self.eph[1]     # Amplitude of sine correction to orbital radius
+        delta_n   = self.eph[2]     # Δn - Mean motion correction [rad/s]
+        M_0       = self.eph[3]     # M₀ - Mean anomaly (at time t_oe )
+        C_uc      = self.eph[4]     # Amplitude of cosine correction to argument of latitude
+        e         = self.eph[5]     # Eccentricity
+        C_us      = self.eph[6]     # Amplitude of sine correction to argument of latitude
+        sqrt_a    = self.eph[7]     # Square root of semimajor axis
+        t_oe      = self.eph[8]     # Reference time of ephemeris from the beginning of GPS week
+        C_ic      = self.eph[9]     # Amplitude of cosine correction to inclination angle
+        Omega     = self.eph[10]    # Ω₀ - Longitude of the ascending node (at weekly epoch)
+        C_is      = self.eph[11]    # Amplitude of sine correction to inclination angle
+        i_0       = self.eph[12]    # i₀ - Inclination angle (at time t_oe)
+        C_rc      = self.eph[13]    # Amplitude of cosine correction to orbital radius
+        omega     = self.eph[14]    # ω - Argument of perigee (at time t_oe)
+        Omega_dot = self.eph[15]    # dΩ/dt - Rate of change of longitude of the ascending node
+        IDOT      = self.eph[16]    # Rate of change of inclination angle (i.e., di/dt)
 
         a = sqrt_a**2           # print " 1) a = (⎷a)² = %.1f [m]" % a
         n = sqrt(mu/a**3) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
-        t_k = self.now - t_0e          # Time from ephemeris epoch
-        # print " 3) tₖ = t - t_0e = %f [s]" % t_k.seconds
+        t_k = (t - self.epoch).total_seconds() - t_oe          # Time from ephemeris epoch
+        # print " 3) tₖ = t - t_oe = %f [s]" % t_k.seconds
         M_k = M_0 + n * t_k     # print " 4) Mₖ  = M₀  + (n)(tₖ) = %f " % M_k
         E = M_k
         for j in xrange(5):
@@ -113,7 +115,7 @@ class Nav():
         # print "12) rₖ = a (1 − e cos(Eₖ)) + δrₖ = %.1f [m]" % r_k
         i_k = i_0 + IDOT * t_k + d_i
         # print "13) iₖ = i₀ + (di/dt)tₖ  + δiₖ = %f " % i_k
-        Omega_k = Omega + (Omega_dot-Omega_dot_e)*t_k + Omega_dot_e*t_0e #TODO
+        Omega_k = Omega + (Omega_dot-Omega_dot_e)*t_k + Omega_dot_e*t_oe
         # print "14) Ωₖ = Ω₀ + (Ω̇ - Ω̇ₑ)tₖ  + Ω̇ₑ t₀ₑ = %f " % Omega_k
         x_prime_k = r_k * cos(u_k)  # print "15) x̕ₖ= rₖ cos(uₖ) = %f" % x_prime_k
         y_prime_k = r_k * sin(u_k)  # print "16) y̕ₖ= rₖ sin(uₖ) = %f" % y_prime_k
@@ -123,9 +125,21 @@ class Nav():
         # print "18) yₖ = x̕ₖsin(Ωₖ) + y̕ₖcos(iₖ)cos(Ωₖ) = %.1f [km]" % (y_k/1000)
         z_k = y_prime_k * sin(i_k)
         # print "19) zₖ = y̕ₖsin(iₖ) = %.1f [km]" % (z_k/1000)
-        r = [x_k, y_k, z_k]     # ECEF coordinates of the satellite
-
+        r = np.array([x_k, y_k, z_k])/1000     # ECEF coordinates of the satellite in km
         return r
+
+
+class NavGLO(Nav):
+    def eph2pos(self, t):
+        """
+        ECEF coordinates of the satellite
+        """
+        r_0 = np.array([self.eph[0],self.eph[4],self.eph[8]])     # R₀ = (X₀, Y₀, Z₀)
+        v_0 = np.array([self.eph[1],self.eph[5],self.eph[9]])     # V₀ = (V_x₀, V_y₀, V_z₀)
+        a_0 = np.array([self.eph[2],self.eph[6],self.eph[10]])    # a₀ = (a_x₀, a_y₀, a_z₀)
+        print "test"+"\n".join(map(str,[r_0,v_0,a_0]))
+        t_k = (self.date - t).total_seconds()
+        return r_0 + v_0*t_k + a_0*t_k**2/2
 
 if __name__ == "__main__":
     with open('../test_data/test.n') as fd:
@@ -141,5 +155,6 @@ if __name__ == "__main__":
         print body[i],
         if (i+1) % 8 == 0: print
 
-    o = Nav(body[:8])
-    print o.eph2pos(10.0)
+    o = NavGPS(body[:8])
+    # print o.eph2pos()
+    print o.week

@@ -2,10 +2,10 @@
 #! encoding: UTF8
 __author__ = 'kirienko'
 
-from nav_data import Nav
-from obs_data import Observ
+from nav_data import NavGPS, NavGLO
 import re
 from collections import defaultdict
+import datetime as dt
 
 def parse_rinex(path):
     """
@@ -37,10 +37,16 @@ def parse_rinex(path):
     prefixes = {'gps':'G', 'glo':'R'}
     sat_prefix = prefixes[satel_type]
 
-    if rinex_type == 'nav' and satel_type != 'mix': #FIXME: it should work for all satellite types
-        if len(body) % 8 != 0:
-            print "Warning: wrong length of NAV file"
-        nav_list = [Nav(body[i*8:(i+1)*8]) for i in xrange(len(body)/8)]
+    if rinex_type == 'nav' and satel_type != 'mix':
+
+        if satel_type == 'gps':
+            if len(body) % 8 != 0:
+                print "Warning: wrong length of NAV file"
+            nav_list = [NavGPS(body[i*8:(i+1)*8]) for i in xrange(len(body)/8)]
+        elif satel_type == 'glo':
+            if len(body) % 4 != 0:
+                print "Warning: wrong length of NAV file"
+            nav_list = [NavGLO(body[i*4:(i+1)*4]) for i in xrange(len(body)/4)]
         nav_dict = defaultdict(list)
         for obj in nav_list:
             nav_dict[sat_prefix+"%02d"%obj.PRN_number] += [obj]
@@ -53,8 +59,15 @@ if __name__ == "__main__":
 
     navigations = parse_rinex('../test_data/test.n')
     for k,v in navigations.items(): print k, [str(vv.date)for vv in v]
+    print "\nSatellites:", ', '.join(sorted(navigations.keys()))
+    g = navigations['G05']
+    # g = navigations['R04']
+    z1,z2 = sorted([g[0],g[1]],key=lambda x: x.date)
+    t1,t2 = z1.eph[8], z2.eph[8]
 
-    g16 = navigations['G16']
-    z2,z1 = g16[1],g16[2]
-    t1,t2 = z1.eph[7], z2.eph[7]
-    print z1.date, z2.date
+    delta_t = dt.timedelta(seconds=t2-t1)
+    print "Δt = t1 - t2 = %s" % delta_t
+    R1, R2 = z1.eph2pos(z1.date+delta_t/2),z2.eph2pos(z2.date-delta_t/2)
+    print "R(t1 - Δt/2) = ",R1
+    print "R(t2 + Δt/2) = ",R2
+    print "ΔX = %d km, ΔY = %d km, ΔZ = %d km" % tuple(int((r2-r1)) for r1,r2 in zip(R1,R2))

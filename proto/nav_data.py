@@ -22,7 +22,8 @@ References:
     Global Navigation Satellite Systems Inertial Navigation and Integration,
     Wiley-Interscience, 2013
     http://ru.bookzz.org/book/2086274/def272
-
+[2] RTKLIB ver. 2.4.2 Manual
+    https://github.com/tomojitakasu/RTKLIB/blob/master/doc/manual_2.4.2.pdf
 """
 
 
@@ -71,6 +72,7 @@ class NavGPS(Nav):
         """
         Computes satellite position (ECEF) and clock bias from broadcast ephemeris.
         See [1], Table 4.1 (p. 117) and Table 4.2 (p. 118)
+            [2], Appendix E4 (p. 142)
         :param:  t = time of measurement (to be converted to seconds from t_oe)
         :return: r = [Xₖ, Yₖ, Zₖ] - coordinates of satellite in ECEF
         """

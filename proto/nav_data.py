@@ -117,13 +117,13 @@ class NavGPS(Nav):
         # print "12) rₖ = a (1 − e cos(Eₖ)) + δrₖ = %.1f [m]" % r_k
         i_k = i_0 + IDOT * t_k + d_i
         # print "13) iₖ = i₀ + (di/dt)tₖ  + δiₖ = %f " % i_k
-        Omega_k = Omega + (Omega_dot-Omega_dot_e)*t_k + Omega_dot_e*t_oe
+        Omega_k = Omega + (Omega_dot-Omega_dot_e)*t_k - Omega_dot_e*t_oe
         # print "14) Ωₖ = Ω₀ + (Ω̇ - Ω̇ₑ)tₖ  + Ω̇ₑ t₀ₑ = %f " % Omega_k
         x_prime_k = r_k * cos(u_k)  # print "15) x̕ₖ= rₖ cos(uₖ) = %f" % x_prime_k
         y_prime_k = r_k * sin(u_k)  # print "16) y̕ₖ= rₖ sin(uₖ) = %f" % y_prime_k
         x_k = x_prime_k * cos(Omega_k) - y_prime_k * cos(i_k) * sin(Omega_k)
         # print "17) xₖ = x̕ₖcos(Ωₖ) - y̕ₖcos(iₖ)sin(Ωₖ) = %.1f [km]" % (x_k/1000)
-        y_k = x_prime_k * sin(Omega_k) - y_prime_k * cos(i_k) * cos(Omega_k)
+        y_k = x_prime_k * sin(Omega_k) + y_prime_k * cos(i_k) * cos(Omega_k)
         # print "18) yₖ = x̕ₖsin(Ωₖ) + y̕ₖcos(iₖ)cos(Ωₖ) = %.1f [km]" % (y_k/1000)
         z_k = y_prime_k * sin(i_k)
         # print "19) zₖ = y̕ₖsin(iₖ) = %.1f [km]" % (z_k/1000)

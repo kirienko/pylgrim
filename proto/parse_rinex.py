@@ -18,6 +18,25 @@ def gps2utc(gpst):
     """
     return gpst - LEAP - A0   # FIXME
 
+def utc2gpst(utct):
+    """
+    Quick and dirty GPS <-- UTC time conversion
+    :param utct: UTC time
+    :return:     GPS time
+    """
+    return utct + dt.timedelta(seconds=LEAP + A0)   # FIXME
+
+def get_header_line(headr,property):
+    '''
+    :param headr: the header of the RINEX-file
+    :param property: string-like property to search for (e.g. 'delta-utc')
+    :return: the string of the ``headr`` containing ``property``
+    '''
+    pattern = re.compile(property, re.IGNORECASE)
+    for d in headr:
+        if pattern.search(d):
+            return d
+
 def parse_rinex(path):
     """
     Parse RINEX-file and returns a timeline, i.e. array of tuples
@@ -47,11 +66,9 @@ def parse_rinex(path):
 
     if rinex_type == 'nav':
         # Define UTC conversion data
-        pat_utc = re.compile('delta-utc', re.IGNORECASE)
-        pat_leap = re.compile('leap', re.IGNORECASE)
-        utc = [h for h in header if pat_utc.search(h)][0]
+        utc = get_header_line(header,'delta-utc')
         global LEAP, A0, A1
-        LEAP = int([h for h in header if pat_leap.search(h)][0][:60])
+        LEAP = int(get_header_line(header,'leap')[:60])
         A0,A1 = [float(h.replace('D','E')) for h in [utc[:22],utc[22:41]]]
         T,W = map(int,utc[42:60].split())
 
@@ -77,8 +94,20 @@ def parse_rinex(path):
         return nav_dict
 
     elif rinex_type == 'obs':
-        pass
+        obs_types = get_header_line(header,"TYPES OF OBSERV").split()
+        number_of_obs_types = int(obs_types[0])
+        obs_types = obs_types[1:1+number_of_obs_types]
+        # print obs_types
 
+
+        # for h in header: print h,
+        observations = []
+        for j,h in enumerate(body):
+            # print j
+            if h[:4] == ' 15 ':
+                satellite_count = int(h[30:32])
+                observations += [ObsGPS(body[j:j+satellite_count+1],obs_types)]
+        return observations
     else:
         raise NotImplementedError
 

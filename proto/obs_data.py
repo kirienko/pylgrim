@@ -10,10 +10,6 @@ nu_1_G, nu_2_G = 1575.42e6, 1227.6e6    # GPS L1 and L2 frequencies
 l1_G, l2_G = c/nu_1_G, c/nu_2_G
 
 
-def get_header_line(headr,property):
-    for d in headr:
-        if property in d:
-            return d
 
 def ionofree_pseudorange(f1,f2,p1,p2):
     '''
@@ -84,6 +80,17 @@ class ObsGPS():
         sec_msec = "%.3f" % float(str_date[-1])
         s, ms = map(int,sec_msec.split('.'))
         self.date = dt.datetime(*(map(int,str_date[:-1])+[s, ms]))
+    def pseudorange(self, sat_PRN, obs_type):
+        '''
+
+        :param sat_PRN: PRN of the satellite (e.g. 'G21')
+        :param obs_type: type of observation (e.g. 'C1')
+        :return: pseudorange (in meters) corresponding PRN and type of observation
+        '''
+        if obs_type in self.obs_types and sat_PRN in self.PRN_number:
+            return self.obs_data[obs_type][self.PRN_number.index(sat_PRN)]
+        else:
+            return None
 
 if __name__ == "__main__":
     with open('../test_data/test.o') as fd:

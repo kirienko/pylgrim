@@ -3,7 +3,7 @@
 __author__ = 'kirienko'
 
 import datetime as dt
-
+import re
 
 c = 299792428                           # speed of light
 nu_1_G, nu_2_G = 1575.42e6, 1227.6e6    # GPS L1 and L2 frequencies
@@ -11,15 +11,7 @@ l1_G, l2_G = c/nu_1_G, c/nu_2_G
 
 
 
-def ionofree_pseudorange(f1,f2,p1,p2):
-    '''
-    :param f1: L₁ frequency value
-    :param f2: L₂ frequency value
-    :param p1: Pseudorange P₁ itself or distance L₁λ₁
-    :param p2: Pseudorange P₂ itself or distance L₂λ₂
-    :return: Ionosphere free pseudorange
-    '''
-    return (f1*f1*p1-f2*f2*p2)/(f1*f1-f2*f2)
+
 
 
 class ObsGPS():
@@ -31,48 +23,6 @@ class ObsGPS():
         self.sat_types = data[0][32:].strip()
         self.PRN_number = [self.sat_types[i*3:(i+1)*3] for i in range(self.sat_count)]
 
-        # Pseudoranges etc
-        def col(matr,i):
-            """
-            Returns i-th column of a matrix
-            :param matr: some matrix of RINEX observation
-            :param i: number of a column
-            :return:
-            """
-            return [matr[j][16*i:16*i+14] for j in xrange(len(matr))]
-
-        def is_def(x):
-            """
-            If this measurement exists
-            """
-            try:
-                ans = float(x)
-            except ValueError:
-                ans = None
-            return ans
-
-        self.obs_data = dict((d,[is_def(x) for x in col(self.raw_data[1:], i)]) for i,d in enumerate(self.obs_types))
-
-
-        def ionofree_delay():
-            delay = []
-            needs = ['C1','P2']
-            # print self.obs_data
-            for i in xrange(self.sat_count):
-                if None not in [self.obs_data[k][i] for k in needs]:
-                    # delay += [ionofree_pseudorange(*[self.obs_data[k][i] for k in needs])]
-                    delay += [ionofree_pseudorange(nu_1_G,nu_2_G,*[self.obs_data[k][i] for k in needs])]
-                # else:
-                #     print i, k, self.sat_count, [self.obs_data[k][i] for k in needs]
-            # print self.sat_count,len(delay),delay
-            if delay == []:
-                return None
-            else:
-                return sum(delay)/len(delay)
-
-
-        # self.iono_free_pr = ionofree_delay()
-
         # Time of the observation       TODO: move to helper file
         str_date = data[0].split()[:6]
         if int(str_date[0]) < 2000:
@@ -80,7 +30,55 @@ class ObsGPS():
         sec_msec = "%.3f" % float(str_date[-1])
         s, ms = map(int,sec_msec.split('.'))
         self.date = dt.datetime(*(map(int,str_date[:-1])+[s, ms]))
-    def pseudorange(self, sat_PRN, obs_type):
+
+        # Pseudoranges etc
+
+        def col(matr,i):
+                """
+                Returns i-th column of a matrix
+                :param matr: some matrix of RINEX observation
+                :param i: number of a column
+                :return:
+                """
+                return [matr[j][16*i:16*i+14] for j in xrange(len(matr))]
+
+        def is_def(x):
+                """
+                If this measurement exists
+                """
+                try:
+                    ans = float(x)
+                except ValueError:
+                    # print "xxx:",re.match('\s+',x)
+                    ans = None
+                return ans
+
+        # self.obs_data = dict((d,[float(x) for x in col(self.raw_data[1:], i) if not re.match('\s+',x)])
+        self.obs_data = dict((d,[is_def(x) for x in col(self.raw_data[1:], i)])
+                             for i,d in enumerate(self.obs_types))
+
+    def prn(self, PRN):
+        return self.PRN_number.index(PRN)
+
+    @staticmethod
+    def __ionofree(f1,f2,p1,p2):
+        '''
+        :param f1: L₁ frequency value
+        :param f2: L₂ frequency value
+        :param p1: Pseudorange P₁ itself or distance L₁λ₁
+        :param p2: Pseudorange P₂ itself or distance L₂λ₂
+        :return: Ionosphere free pseudorange
+        '''
+        return (f1*f1*p1-f2*f2*p2)/(f1*f1-f2*f2)
+
+    def ionofree_pseudorange(self, sat_PRN):
+        needs = ['C1','P2']
+        if None not in [self.obs_data[k][self.prn(sat_PRN)] for k in needs]:
+            return self.__ionofree(nu_1_G,nu_2_G,*[self.obs_data[k][self.prn(sat_PRN)] for k in needs])
+
+
+
+    def pseudorange(self, sat_PRN, obs_type): #TODO: do we need this?
         '''
 
         :param sat_PRN: PRN of the satellite (e.g. 'G21')
@@ -88,7 +86,7 @@ class ObsGPS():
         :return: pseudorange (in meters) corresponding PRN and type of observation
         '''
         if obs_type in self.obs_types and sat_PRN in self.PRN_number:
-            return self.obs_data[obs_type][self.PRN_number.index(sat_PRN)]
+            return self.obs_data[obs_type][self.prn(sat_PRN)]
         else:
             return None
 

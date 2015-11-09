@@ -5,7 +5,7 @@ import datetime as dt
 import numpy as np
 
 from parse_rinex import parse_rinex, utc2gpst
-from proto.coord.ecef import ecef_to_lat_lon_alt
+from proto.coord.ecef import ecef_to_lat_lon_alt, sat_elev
 
 __author__ = 'kirienko'
 
@@ -99,3 +99,5 @@ if __name__ == "__main__":
     # ecef_to_lat_lon_alt([1,1,6400000])
     # ecef_to_lat_lon_alt([1,6400000,1])
     # ecef_to_lat_lon_alt([6400000,1,1])
+
+    print sat_elev([6.38e6,0,0],[7.0e6,1e6,0])

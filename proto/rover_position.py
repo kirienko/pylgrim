@@ -29,7 +29,7 @@ def least_squares(obs, navs):
     :return:
     """
     c = 299792428 # speed of light
-    print "=== Least Squares ==="
+    # print "=== Least Squares ==="
     # from A-matrix
     # ↳ find all possible satellites N
     sats = []
@@ -61,7 +61,7 @@ def least_squares(obs, navs):
         x_hat = ((AT*A).I * AT * l).flatten().getA()[0]
         x_hat[3] /= c
         # print "Q =",(AT*A).I.diagonal()
-        print "(x,y,z,cδt) =",x_hat
+        # print "(x,y,z,cδt) =",x_hat
         # iterate
         xyz += x_hat
         delta = np.sqrt(sum(map(lambda k: k**2,x_hat[:3])+[x_hat[3]/c]))
@@ -101,3 +101,8 @@ if __name__ == "__main__":
     # ecef_to_lat_lon_alt([6400000,1,1])
 
     print sat_elev([6.38e6,0,0],[7.0e6,1e6,0])
+
+    for s in navigations:
+        n = navigations[s][0]
+        xyz = n.eph2pos(n.date)
+        print("Satellite's %s zenith angle: %.1f"%(s,sat_elev(ecef_to_lat_lon_alt(least_squares(o, navigations)),xyz)))

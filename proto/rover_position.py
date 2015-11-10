@@ -4,8 +4,9 @@
 import datetime as dt
 import numpy as np
 
+from coord.ecef import ecef_to_lat_lon_alt, sat_elev
 from parse_rinex import parse_rinex, utc2gpst
-from proto.coord.ecef import ecef_to_lat_lon_alt, sat_elev
+from visualization.ellipsoid import satellites
 
 __author__ = 'kirienko'
 
@@ -102,7 +103,16 @@ if __name__ == "__main__":
 
     print sat_elev([6.38e6,0,0],[7.0e6,1e6,0])
 
+    sat_positions, sat_names = [], []
     for s in navigations:
         n = navigations[s][0]
         xyz = n.eph2pos(n.date)
-        print("Satellite's %s zenith angle: %.1f"%(s,sat_elev(ecef_to_lat_lon_alt(least_squares(o, navigations)),xyz)))
+        sat_positions += [xyz]
+        sat_names += [s]
+        user_pos = least_squares(o, navigations)
+        # print "User position:",ecef_to_lat_lon_alt(user_pos)
+        print("Satellite's %s zenith angle: %.1f"%
+              (s,sat_elev(ecef_to_lat_lon_alt(user_pos),xyz)))
+
+    user_pos = least_squares(o, navigations)[:3]
+    satellites(user_pos,sat_positions,sat_names)

@@ -3,8 +3,9 @@ import numpy as np
 from numpy import sin,cos, tan, pi, ones, zeros
 
 import matplotlib.pyplot as plt
-from coord.ecef import ecef_to_lat_lon_alt
 from mpl_toolkits.mplot3d import Axes3D
+
+from coord.ecef import ecef_to_lat_lon_alt, sat_elev
 
 
 def satellites(pos, sat_pos, sat_names=''):
@@ -17,7 +18,7 @@ def satellites(pos, sat_pos, sat_names=''):
     '''
     a = 6378137.0       # Major semi-axis
     b = 6356752.314245  # Minor semi-axis
-    elev_mask = np.deg2rad(30)  # elevation mask in deg
+    elev_mask = np.deg2rad(30)  # elevation mask
     num = 100           # number of points to render
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -37,7 +38,14 @@ def satellites(pos, sat_pos, sat_names=''):
     ax.plot(a * cos(v-pi/2), zeros(num), b * sin(v-pi/2), '-r',linewidth=0.5)
 
     xx,yy,zz = [[p[i] for p in sat_pos] for i in range(3)]
-    ax.scatter3D(xx,yy,zz,color='k',s=10) # <-- satellites
+
+    for idx, sat in enumerate(sat_pos):
+        if sat_elev(pos,sat,deg=False) > elev_mask:
+            ax.scatter3D(*sat,color='k',s=10) # <-- satellites
+        else:
+            ax.scatter3D(*sat, alpha=0.5,
+                         color='gray',s=10) # <-- satellites
+            # print "Bad satellite:",sat, sat_elev(pos,sat)
 
     if sat_names:
         for i in range(len(sat_names)):

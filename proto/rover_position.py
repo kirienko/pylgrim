@@ -112,7 +112,8 @@ if __name__ == "__main__":
         user_pos = least_squares(o, navigations)
         # print "User position:",ecef_to_lat_lon_alt(user_pos)
         print("Satellite's %s zenith angle: %.1f"%
-              (s,sat_elev(ecef_to_lat_lon_alt(user_pos),xyz)))
+              (s,sat_elev(user_pos,xyz)))
 
     user_pos = least_squares(o, navigations)[:3]
+    print "User's position:",user_pos
     satellites(user_pos,sat_positions,sat_names)

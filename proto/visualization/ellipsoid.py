@@ -3,35 +3,41 @@ import numpy as np
 from numpy import sin,cos, tan, pi, ones, zeros
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
 from coord.ecef import ecef_to_lat_lon_alt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def satellites(pos, sat_pos, sat_names=''):
-    a = 6378137.0
-    b = 6356752.314245
-
+    '''
+    Visualize satellites above the rover
+    :param pos: rover's position (ecef)
+    :param sat_pos: array of satellites positions (each position in ecef)
+    :param sat_names: [optional] satellites names
+    :return: None
+    '''
+    a = 6378137.0       # Major semi-axis
+    b = 6356752.314245  # Minor semi-axis
+    elev_mask = np.deg2rad(30)  # elevation mask in deg
+    num = 100           # number of points to render
     fig = plt.figure()
     ax = Axes3D(fig)
     ax.set_aspect('equal',anchor='C')
-    # ax.set_axis_off()
+    ax.set_axis_off()
 
-    u = np.linspace(0, 2 * pi, 100)
-    v = np.linspace(0, pi, 100)
+    u = np.linspace(0, 2 * pi, num)
+    v = np.linspace(0, pi, num)
 
     x = a * np.outer(cos(u), sin(v))
     y = a * np.outer(sin(u), sin(v))
-    z = b * np.outer(ones(np.size(u)), cos(v))
+    z = b * np.outer(ones(num), cos(v))
     ax.plot_surface(x, y, z, rstride=5, cstride=2, color='blue',
-                    alpha=0.5,
-                    linewidth=0.05)
+                    alpha=0.5,linewidth=0.05)
     ax.plot(a * cos(u),
             a * sin(u), 0, '-r',linewidth = 0.5)  # <-- equator
-    ax.plot(a * cos(v-pi/2), zeros(100), b * sin(v-pi/2), '-r',linewidth=0.5)
+    ax.plot(a * cos(v-pi/2), zeros(num), b * sin(v-pi/2), '-r',linewidth=0.5)
 
     xx,yy,zz = [[p[i] for p in sat_pos] for i in range(3)]
-    ax.scatter3D(xx,yy,zz,color='k',s=10)
+    ax.scatter3D(xx,yy,zz,color='k',s=10) # <-- satellites
 
     if sat_names:
         for i in range(len(sat_names)):
@@ -40,39 +46,52 @@ def satellites(pos, sat_pos, sat_names=''):
         pos = list(pos)
     ax.scatter3D(*pos,color='r',s=10)
 
-    # cone
-    elev_mask = np.deg2rad(60)
-    perpendicular = [(0,5*pos[i]) for i in range(3)]
-    ax.plot(*perpendicular)
+    perpendicular = [(pos[i],3.5*pos[i]) for i in range(3)]
+    ax.plot(*perpendicular,color='y')
 
-    # rotate cone on phi and theta
+    def rotate(X,Y,Z,phi,theta):
+        '''
+        Euler's rotations
+        :param X:
+        :param Y:
+        :return:
+        '''
+        alpha = theta
+        beta  = pi/2
+        gamma = phi
+        D = np.matrix([[cos(alpha),-sin(alpha), 0],
+                       [sin(alpha), cos(alpha), 0],
+                       [    0,          0,      1]])
+        C= np.matrix([[cos(beta), 0,-sin(beta)],
+                       [0,     1,       0],
+                       [sin(beta),0, cos(beta)]])
+        B = np.matrix([[cos(gamma), sin(gamma), 0],
+                       [-sin(gamma),cos(gamma), 0],
+                       [    0,          0,      1]])
 
-    def rotate(X,Y,alpha):
-        R = np.matrix([[cos(alpha),-sin(alpha)],
-                       [sin(alpha),cos(alpha)]])
-        print len(X),len(Y)
-        M = np.matrix([X, Y])
-        X1, Y1 = R * M
-        # print X1,Y1
-        return X1.getA()[0], Y1.getA()[0]
+        X1, Y1, Z1 = [],[],[]
+        for i in xrange(num):
+            vec = np.array([X[i],Y[i],Z[i]])
+            XYZ = B * C * D * vec
+            X1.extend(XYZ[0].tolist())
+            Y1.extend(XYZ[1].tolist())
+            Z1.extend(XYZ[2].tolist())
+        return map(np.array,[X1, Y1, Z1])
 
     phi, theta, h = ecef_to_lat_lon_alt(pos,deg=False)
 
-    cone_x = np.linspace(0,4*a,100)
-    cone_y = cone_x
-    cone_z = cone_x
-    X,Y1 = rotate(cone_x,cone_y,theta)
-    # X1,Z1 = rotate(X,cone_z,phi)
+    # cone:
+    t = np.linspace(0,2.5*a,num)      # just a parameter
+    cone_x = np.outer(ones(num),t)
+    cone_y = t * np.outer(cos(u), 1/tan(elev_mask))
+    cone_z = t * np.outer(sin(u), 1/tan(elev_mask))
+    # rotate cone on phi and theta
+    Xx,Yy, Zz = rotate(cone_x,cone_y,cone_z,phi,theta)
 
-    # cone_y = cone_x * np.outer(cos(u), 1/tan(elev_mask))
-    cone_z = cone_x * np.outer(sin(u), 1/tan(elev_mask))
-    cone_y = X * np.outer(cos(u), 1/tan(elev_mask))
-    cone_z = X * np.outer(sin(u), 1/tan(elev_mask))
-
-    ax.plot_surface(cone_x, cone_y, cone_z,
+    ax.plot_surface(Xx+pos[0], Yy+pos[1], Zz+pos[2],
                     rstride=5, cstride=5, color='y',
-                    alpha=0.2, linewidth=0.01)
-    ax.set_xlim3d(-5*a,5*a)
-    ax.set_ylim3d(-5*a,5*a)
-    ax.set_zlim3d(-5*a,5*a)
+                    alpha=0.1, linewidth=0.01)
+    ax.set_xlim3d(-4*a,4*a)
+    ax.set_ylim3d(-4*a,4*a)
+    ax.set_zlim3d(-4*a,4*a)
     plt.show()

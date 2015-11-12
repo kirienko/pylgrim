@@ -59,7 +59,7 @@ def on_map(positions,proj='cass'):
     lat, lon = [p[0] for p in positions], [p[1] for p in positions]
     pos = (sum(lat)/len(lat), sum(lon)/len(lon))
 
-    map_width = map_height = 1e5
+    map_width = map_height = 1e6
 
     m = Basemap(width=map_width,height=map_height,\
                resolution='i',projection=proj,lon_0=pos[1],lat_0=pos[0])
@@ -69,7 +69,6 @@ def on_map(positions,proj='cass'):
     m.drawparallels(np.arange(int(pos[0])-5,int(pos[0])+5,1.),labels=[1,0,0,1])
     m.drawmeridians(np.arange(int(pos[1])-5,int(pos[1])+5,1.),labels=[1,0,0,1])
     m.drawmapboundary(fill_color='aqua')
-    # print pos.tolist()
     m.plot(lon,lat,'.b--',zorder=10,latlon=True)
 
     m.scatter(lon,lat,      # longitude first!
@@ -87,4 +86,5 @@ def on_map(positions,proj='cass'):
         fontcolor='#000000',
         zorder=20)
     m.drawmapscale(pos[1],pos[0],pos[0],pos[1],20,barstyle='simple',zorder=50)
+    plt.title(u'Map centered at (%.1fN, %.1fE)' % pos)
     plt.show()

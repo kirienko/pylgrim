@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #! encoding: UTF8
 
-from time import mktime, time
 import datetime as dt
 import numpy as np
 from math import sqrt, sin, cos, atan2
@@ -35,14 +34,14 @@ Omega_dot_e = 7.2921151467/1E5  # WGS84 value of Earth’s rotation rate [rad/s]
 
 
 class Nav():
-    def __init__(self,data):
+    def __init__(self,data,header):
         """
         Base navigation class that contains raw data, date and PRN number.
         It also has self.A tuple with three elements, but it is important to remember
                 that these elements have different meaning for GPL and GLO.
 
         :param data: lines of observation data: 8 for GPS, 4 for GLO
-        :param type: type of GNSS: either 'gps', or 'glo'
+        :param header: tuple (LEAP, A0, A1) - almanac parameters for time correction
         :return:
         """
         self.raw_data = []
@@ -51,8 +50,9 @@ class Nav():
         for d in data[1:]:
             self.raw_data += [d[3+i*19:3+(i+1)*19] for i in range(4)]
         self.raw_data = [d.replace('D','E') for d in self.raw_data]
-        self.A   = map(float,self.raw_data[7:10])
+        self.A   = tuple(map(float,self.raw_data[7:10]))
         self.PRN_number = int(self.raw_data[0])
+        self.leap, self.A0, self.A1 = header
 
         # Time of the observation
         if int(self.raw_data[1]) < 2000: self.raw_data[1] = '20' + self.raw_data[1]
@@ -69,13 +69,21 @@ class Nav():
 
 
 class NavGPS(Nav):
+    def utc2gps(self, t):
+        delta_t = (t - self.date).seconds
+        if delta_t > 302400:
+            delta_t -= 604800
+        elif delta_t < -302400:
+            delta_t += 604800
+        return t + dt.timedelta(seconds= self.A0 + self.A[0] + self.leap + self.A[1]*delta_t)
 
-    def eph2pos(self, t):
+
+    def eph2pos(self, t_utc):
         """
         Computes satellite position (ECEF) and clock bias from broadcast ephemeris.
         See [1], Table 4.1 (p. 117) and Table 4.2 (p. 118)
             [2], Appendix E4 (p. 142)
-        :param:  t = time of measurement (to be converted to seconds from t_oe)
+        :param:  t_utc = time of measurement (to be converted to seconds from t_oe)
         :return: r = [Xₖ, Yₖ, Zₖ] - coordinates of satellite in ECEF
         """
         IODE      = self.eph[0]     # Amplitude of sine correction to orbital radius
@@ -96,6 +104,7 @@ class NavGPS(Nav):
         Omega_dot = self.eph[15]    # dΩ/dt - Rate of change of longitude of the ascending node
         IDOT      = self.eph[16]    # Rate of change of inclination angle (i.e., di/dt)
 
+        t = self.utc2gps(t_utc)
         a = sqrt_a**2           # print " 1) a = (⎷a)² = %.1f [m]" % a
         n = sqrt(mu/a**3) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
         t_k = (t - self.epoch).total_seconds() - t_oe          # Time from ephemeris epoch

@@ -2,29 +2,12 @@
 #! encoding: UTF8
 __author__ = 'kirienko'
 
-from nav_data import NavGPS, NavGLO
-from obs_data import ObsGPS
 import re
 from collections import defaultdict
-import datetime as dt
 
-LEAP, A0, A1 = 17, 0., 0.
+from nav_data import NavGPS, NavGLO
+from obs_data import ObsGPS
 
-def gps2utc(gpst):
-    """
-    Quick and dirty GPS --> UTC time conversion
-    :param gpst: GPS time
-    :return:     UTC time
-    """
-    return gpst - LEAP - A0   # FIXME
-
-def utc2gpst(utct):
-    """
-    Quick and dirty GPS <-- UTC time conversion
-    :param utct: UTC time
-    :return:     GPS time
-    """
-    return utct + dt.timedelta(seconds=LEAP + A0)   # FIXME
 
 def get_header_line(headr,property):
     '''
@@ -67,7 +50,6 @@ def parse_rinex(path):
     if rinex_type == 'nav':
         # Define UTC conversion data
         utc = get_header_line(header,'delta-utc')
-        global LEAP, A0, A1
         LEAP = int(get_header_line(header,'leap')[:60])
         A0,A1 = [float(h.replace('D','E')) for h in [utc[:22],utc[22:41]]]
         T,W = map(int,utc[42:60].split())
@@ -83,11 +65,11 @@ def parse_rinex(path):
         if satel_type == 'gps':
             if len(body) % 8 != 0:
                 print "Warning: wrong length of NAV file"
-            nav_list = [NavGPS(body[i*8:(i+1)*8]) for i in xrange(len(body)/8)]
+            nav_list = [NavGPS(body[i*8:(i+1)*8],(LEAP,A0,A1)) for i in xrange(len(body)/8)]
         elif satel_type == 'glo':
             if len(body) % 4 != 0:
                 print "Warning: wrong length of NAV file"
-            nav_list = [NavGLO(body[i*4:(i+1)*4]) for i in xrange(len(body)/4)]
+            nav_list = [NavGLO(body[i*4:(i+1)*4],(LEAP,A0,A1)) for i in xrange(len(body)/4)]
         nav_dict = defaultdict(list)
         for obj in nav_list:
             nav_dict[sat_prefix+"%02d"%obj.PRN_number] += [obj]

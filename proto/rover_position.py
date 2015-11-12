@@ -6,7 +6,7 @@ import numpy as np
 
 from coord.ecef import ecef_to_lat_lon_alt, sat_elev
 from parse_rinex import parse_rinex, utc2gpst
-from visualization.ellipsoid import satellites
+from visualization.map import on_map
 
 __author__ = 'kirienko'
 
@@ -101,19 +101,21 @@ if __name__ == "__main__":
     # ecef_to_lat_lon_alt([1,6400000,1])
     # ecef_to_lat_lon_alt([6400000,1,1])
 
-    print sat_elev([6.38e6,0,0],[7.0e6,1e6,0])
-
     sat_positions, sat_names = [], []
+    user_pos = least_squares(o, navigations)
+
     for s in navigations:
         n = navigations[s][0]
         xyz = n.eph2pos(n.date)
         sat_positions += [xyz]
         sat_names += [s]
-        user_pos = least_squares(o, navigations)
         # print "User position:",ecef_to_lat_lon_alt(user_pos)
         print("Satellite's %s zenith angle: %.1f"%
               (s,sat_elev(user_pos,xyz)))
 
-    user_pos = least_squares(o, navigations)[:3]
-    print "User's position:",user_pos
-    satellites(user_pos,sat_positions,sat_names)
+
+    user_pos = []
+    for num_o in [180,200,220,240]:
+        user_pos += [least_squares(observations[num_o], navigations)[:3]]
+        # print "User's position:",user_pos
+    on_map(map(ecef_to_lat_lon_alt,user_pos))

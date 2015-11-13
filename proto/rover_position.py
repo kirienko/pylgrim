@@ -6,6 +6,8 @@ import numpy as np
 
 from coord.ecef import ecef_to_lat_lon_alt, sat_elev
 from parse_rinex import parse_rinex
+from visualization.ellipsoid import satellites
+from visualization.map import on_map
 
 __author__ = 'kirienko'
 
@@ -144,10 +146,10 @@ if __name__ == "__main__":
         print("Satellite's %s zenith angle: %.1f"%
               (s,sat_elev(user_pos,xyz)))
 
-
+    satellites(user_pos,sat_positions,sat_names)
     user_pos = []
     for num_o in range(180,250,10):
         user_pos += [least_squares(observations[num_o], navigations)]
     user_pos = [up[:3] for up in user_pos if up is not None]
     print "User's position:\n",'\n'.join(map(lambda x: lla_string(ecef_to_lat_lon_alt(x)),user_pos))
-    # on_map(map(ecef_to_lat_lon_alt,user_pos))
+    on_map(map(ecef_to_lat_lon_alt,user_pos))

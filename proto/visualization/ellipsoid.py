@@ -52,7 +52,7 @@ def satellites(pos, sat_pos, sat_names=''):
             ax.text(xx[i],yy[i],zz[i],sat_names[i])
     if not isinstance(pos,list):
         pos = list(pos)
-    ax.scatter3D(*pos,color='r',s=10)
+    ax.scatter3D(*pos[:3],color='r',s=10)
 
     perpendicular = [(pos[i],3.5*pos[i]) for i in range(3)]
     ax.plot(*perpendicular,color='y')

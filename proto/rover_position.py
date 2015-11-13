@@ -8,6 +8,7 @@ from coord.ecef import ecef_to_lat_lon_alt, sat_elev
 from parse_rinex import parse_rinex
 from visualization.ellipsoid import satellites
 from visualization.map import on_map
+from delays import tropmodel
 
 __author__ = 'kirienko'
 
@@ -78,13 +79,14 @@ def least_squares(obs, navs, init_pos = ''):
         xyzt = init_pos
     for itr in range(10):
         # geometrical ranges
+        lla = ecef_to_lat_lon_alt(xyzt)
         rho = np.array([np.sqrt(sum([(x - xyzt[i])**2 for i,x in enumerate(XYZs[j])])) for j in range(len(sats))])
 
         # from A-matrix
         A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i],1) for i in range(len(sats))])
         AT = A.transpose()
         # form l-vector
-        l = np.matrix([P[i] - rho[i] - c*xyzt[3] for i in xrange(len(sats))]).transpose()
+        l = np.matrix([P[i] - rho[i] - c*xyzt[3] - tropmodel(lla,sat_elev(xyzt[:3],XYZs[i])) for i in xrange(len(sats))]).transpose()
         # form x-vector
         x_hat = ((AT*A).I * AT * l).flatten().getA()[0]
         x_hat[3] /= c
@@ -146,7 +148,7 @@ if __name__ == "__main__":
         print("Satellite's %s zenith angle: %.1f"%
               (s,sat_elev(user_pos,xyz)))
 
-    satellites(user_pos,sat_positions,sat_names)
+    # satellites(user_pos,sat_positions,sat_names)
     user_pos = []
     for num_o in range(180,250,10):
         user_pos += [least_squares(observations[num_o], navigations)]

@@ -77,6 +77,30 @@ class NavGPS(Nav):
             delta_t += 604800
         return t + dt.timedelta(seconds= self.A0 + self.A[0] + self.leap + self.A[1]*delta_t)
 
+    def _time_rel_correction(self, t):
+        """
+        Relativistic correction of satellite's time (see [1], p.122)
+        :param t_utc: t_utc = time of measurement (to be converted to seconds from t_oe)
+        :return: the relativistic correction term [in seconds]
+        """
+        # TODO ecc_anomaly()
+        return -1.006131641853951e-08 * self.eph[5] * self.eph[7] * self._ecc_anomaly(t)
+
+    def _ecc_anomaly(self, t_k):
+        """
+        :return: Eccentric anomaly Eₖ(tₖ)
+        """
+        delta_n   = self.eph[2]     # Δn - Mean motion correction [rad/s]
+        e         = self.eph[5]     # Eccentricity
+        sqrt_a    = self.eph[7]     # Square root of semimajor axis
+        n = sqrt(mu/sqrt_a**6) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
+        M_0       = self.eph[3]     # M₀ - Mean anomaly (at time t_oe )
+        M_k = M_0 + n * t_k     # print " 4) Mₖ  = M₀  + (n)(tₖ) = %f " % M_k
+        E_k = M_k
+        for j in xrange(5):
+            E_k -= (E_k - e * sin(E_k) - M_k) / (1 - e * cos(E_k))
+        # print " 5) Mₖ  = Eₖ  + e sin(Eₖ) = %f " % E_k
+        return E_k
 
     def eph2pos(self, t_utc):
         """
@@ -86,10 +110,10 @@ class NavGPS(Nav):
         :param:  t_utc = time of measurement (to be converted to seconds from t_oe)
         :return: r = [Xₖ, Yₖ, Zₖ] - coordinates of satellite in ECEF
         """
-        IODE      = self.eph[0]     # Amplitude of sine correction to orbital radius
+        #IODE      = self.eph[0]     # Amplitude of sine correction to orbital radius
         C_rs      = self.eph[1]     # Amplitude of sine correction to orbital radius
-        delta_n   = self.eph[2]     # Δn - Mean motion correction [rad/s]
-        M_0       = self.eph[3]     # M₀ - Mean anomaly (at time t_oe )
+        #delta_n   = self.eph[2]     # Δn - Mean motion correction [rad/s]
+        #M_0       = self.eph[3]     # M₀ - Mean anomaly (at time t_oe )
         C_uc      = self.eph[4]     # Amplitude of cosine correction to argument of latitude
         e         = self.eph[5]     # Eccentricity
         C_us      = self.eph[6]     # Amplitude of sine correction to argument of latitude
@@ -106,14 +130,9 @@ class NavGPS(Nav):
 
         t = self.utc2gps(t_utc)
         a = sqrt_a**2           # print " 1) a = (⎷a)² = %.1f [m]" % a
-        n = sqrt(mu/a**3) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
         t_k = (t - self.epoch).total_seconds() - t_oe          # Time from ephemeris epoch
         # print " 3) tₖ = t - t_oe = %f [s]" % t_k.seconds
-        M_k = M_0 + n * t_k     # print " 4) Mₖ  = M₀  + (n)(tₖ) = %f " % M_k
-        E = M_k
-        for j in xrange(5):
-            E -= (E - e * sin(E) - M_k) / (1 - e * cos(E))
-        # print " 5) Mₖ  = Eₖ  + e sin(Eₖ) = %f " % E
+        E = self._ecc_anomaly(t_k)
         sat_lat_phi = atan2(sqrt(1 - e**2)*sin(E),cos(E)-e) + omega
         # print " 7) φ = arctan(α) + ω = %f [rad]" % sat_lat_phi
         d_lat = C_us*sin(2*sat_lat_phi) + C_uc*cos(2*sat_lat_phi)

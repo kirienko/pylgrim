@@ -70,21 +70,23 @@ class Nav():
 
 class NavGPS(Nav):
     def utc2gps(self, t):
-        delta_t = (t - self.date).seconds
+        delta_t = (t - self.date).total_seconds()
         if delta_t > 302400:
             delta_t -= 604800
         elif delta_t < -302400:
             delta_t += 604800
-        return t + dt.timedelta(seconds= self.A0 + self.A[0] + self.leap + self.A[1]*delta_t)
+        # return t + dt.timedelta(seconds= self.A0 + self.A[0] + self.leap + self.A[1]*delta_t)
+        return t + dt.timedelta(seconds= self.A0 + self.leap + self.A1*delta_t)
 
-    def _time_rel_correction(self, t):
+    def _time_rel_correction(self, t_sv):
         """
         Relativistic correction of satellite's time (see [1], p.122)
-        :param t_utc: t_utc = time of measurement (to be converted to seconds from t_oe)
+        :param t:
         :return: the relativistic correction term [in seconds]
         """
-        # TODO ecc_anomaly()
-        return -1.006131641853951e-08 * self.eph[5] * self.eph[7] * self._ecc_anomaly(t)
+        # t = self.utc2gps(t_utc)
+        t_k = (t_sv - self.epoch).total_seconds() - self.eph[8]     # Time from ephemeris epoch
+        return -4.442807622e-10 * self.eph[5] * self.eph[7] * sin(self._ecc_anomaly(t_k))
 
     def _ecc_anomaly(self, t_k):
         """
@@ -95,12 +97,19 @@ class NavGPS(Nav):
         sqrt_a    = self.eph[7]     # Square root of semimajor axis
         n = sqrt(mu/sqrt_a**6) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
         M_0       = self.eph[3]     # M₀ - Mean anomaly (at time t_oe )
-        M_k = M_0 + n * t_k     # print " 4) Mₖ  = M₀  + (n)(tₖ) = %f " % M_k
+        M_k = M_0 + n * t_k         # print " 4) Mₖ  = M₀  + (n)(tₖ) = %f " % M_k
         E_k = M_k
         for j in xrange(5):
             E_k -= (E_k - e * sin(E_k) - M_k) / (1 - e * cos(E_k))
         # print " 5) Mₖ  = Eₖ  + e sin(Eₖ) = %f " % E_k
         return E_k
+
+    def time_offset(self, t_utc):
+        t_sv = self.utc2gps(t_utc)
+        # return self.A[0] + self.A[1]*(t_sv - self.date).total_seconds() + \
+        return self.A[0] + self.A[1]*(t_sv - self.date).total_seconds() + \
+               self.A[2]*(t_sv - self.date).total_seconds()**2 + \
+               self._time_rel_correction(t_sv)
 
     def eph2pos(self, t_utc):
         """

@@ -79,16 +79,16 @@ def on_map(positions,proj='cass'):
     lat, lon = [p[0] for p in positions], [p[1] for p in positions]
     pos = (sum(lat)/len(lat), sum(lon)/len(lon))
 
-    map_width = map_height = 1e6    # optimized for the scale: 1e5
+    map_width = map_height = 2e5    # optimized for the scale: 1e5
 
     m = Basemap(width=map_width,height=map_height,\
-                resolution='c',     # 'c', 'l', 'i', 'h', 'f'
+                resolution='i',     # 'c', 'l', 'i', 'h', 'f'
                 projection=proj,lon_0=pos[1],lat_0=pos[0])
     m.drawcoastlines()
     m.fillcontinents(color='coral',lake_color='aqua')
     # draw parallels and meridians.
-    m.drawparallels(np.arange(int(pos[0])-5,int(pos[0])+5,1.),labels=[1,0,0,1])
-    m.drawmeridians(np.arange(int(pos[1])-5,int(pos[1])+5,1.),labels=[1,0,0,1])
+    m.drawparallels(np.arange(int(pos[0])-10,int(pos[0])+10,1.),labels=[1,0,0,1])
+    m.drawmeridians(np.arange(int(pos[1])-10,int(pos[1])+10,1.),labels=[1,0,0,1])
     m.drawmapboundary(fill_color='aqua')
     m.plot(lon,lat,'.b--',zorder=10,latlon=True)
 

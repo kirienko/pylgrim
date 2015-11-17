@@ -46,28 +46,30 @@ def least_squares(obs, navs, init_pos = ''):
     c = 299792428   # speed of light
     elev_mask = 10  # satellite elevation mask
     now = obs.date
-    # print "=== Least Squares ==="
     # Find all possible satellites N
     sats = []
+    # sats = {}
     for i,r in enumerate(obs.PRN_number):
         if obs.obs_data['C1'][i] and obs.obs_data['P2'][i] and 'G' in r:
+            nnt = nav_nearest_in_time(now,navs[r])
             if len(init_pos):
-                sat_coord = nav_nearest_in_time(now,navs[r]).eph2pos(now)
-                # print "elev =", sat_elev(init_pos,sat_coord)
+                sat_coord = nnt.eph2pos(now)
                 if sat_elev(init_pos,sat_coord) < elev_mask:
                     print "Satellite %s excluded" % r
                     continue
-            sats += [r]
+            # sats += [r]
+            sats += [(r,nnt)]
+            # sats.update({r:nnt})
     # Form matrix if N >= 4:
     if len(sats) > 3:
         # observed [iono-free] pseudoranges
-        P = np.array([obs.ionofree_pseudorange(s) for s in sats])
+        P = np.array([obs.ionofree_pseudorange(s[0]) for s in sats])
         # print "P =",P
         # get XYZ-coords of satellites
-        # XYZs = np.array([navs[s][0].eph2pos(now) for s in sats])
-        XYZs = np.array([nav_nearest_in_time(now,navs[s]).eph2pos(now) for s in sats])
+        # XYZs = np.array([nav_nearest_in_time(now,navs[s]).eph2pos(now) for s in sats])
+        XYZs = np.array([s[1].eph2pos(now) for s in sats])
         # print "XYZs =",XYZs
-    elif len(sats) <=3 and len(init_pos):     # FIXME: rewise this logic
+    elif len(sats) <= 3 and len(init_pos):     # FIXME: rewise this logic
         print "\n\tWarning: too few satellites:", len(sats)
         return None
     else:
@@ -78,29 +80,34 @@ def least_squares(obs, navs, init_pos = ''):
     if len(init_pos):
         xyzt = init_pos
     for itr in range(10):
+        # print "\t iter =", itr,
         # geometrical ranges
         lla = ecef_to_lat_lon_alt(xyzt)
-        rho = np.array([np.sqrt(sum([(x - xyzt[i])**2 for i,x in enumerate(XYZs[j])])) for j in range(len(sats))])
-
+        rho = np.array([np.sqrt(sum([(x - xyzt[i])**2 for i,x in enumerate(XYZs[j])])) for j in xrange(len(sats))])
         # from A-matrix
-        A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i],1) for i in range(len(sats))])
+        A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i],1) for i in xrange(len(sats))])
         AT = A.transpose()
-        # form l-vector
-        l = np.matrix([P[i] - rho[i] - c*xyzt[3] - tropmodel(lla,sat_elev(xyzt[:3],XYZs[i])) for i in xrange(len(sats))]).transpose()
+        # form l-vector (sometimes `l` is denoted as `b`)
+        l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now) - tropmodel(lla,sat_elev(xyzt[:3],XYZs[i]))
+                       for i,s in enumerate(sats)]).transpose()
         # form x-vector
-        x_hat = ((AT*A).I * AT * l).flatten().getA()[0]
+        x_hat_matrix = ((AT*A).I * AT * l)
+        x_hat = x_hat_matrix.flatten().getA()[0]
         x_hat[3] /= c
         # print "Q =",(AT*A).I.diagonal()
         # print "(x,y,z,cδt) =",x_hat
         # iterate
         xyzt += x_hat
+        # print lla_string(ecef_to_lat_lon_alt(xyzt)),"%.4f"%xyzt[3]
         delta = np.sqrt(sum(map(lambda k: k**2,x_hat[:3])+[x_hat[3]/c]))
         if delta < 10.:
             break
-        # XYZs = np.array([navs[s][0].eph2pos(utc2gpst(o.date)) for s in sats])
-        XYZs = np.array([nav_nearest_in_time(now,navs[s]).eph2pos(now-dt.timedelta(seconds = x_hat[3])) for s in sats])
+        # XYZs = np.array([nav_nearest_in_time(now,navs[s]).eph2pos(now-dt.timedelta(seconds = x_hat[3])) for s in sats])
+        now += dt.timedelta(seconds = x_hat[3])
+        XYZs = np.array([s[1].eph2pos(now) for s in sats])
 
     if len(init_pos):
+        # print l - A*x_hat_matrix
         return xyzt
     else:
         # print "try with initial position",xyzt,
@@ -123,22 +130,12 @@ if __name__ == "__main__":
     observations = parse_rinex(obs_file)
     o = observations[240]
     print o.sat_types
-    # sats = ['G05', 'G16', 'G18', 'G21']
-    # for s in sats:
-    #     print "C1 from %s at time %s: %f [m]"% (s,str(o.date.time()),o.pseudorange(s,'C1'))
 
 
-    print lla_string(ecef_to_lat_lon_alt(least_squares(o, navigations)))
 
-    # ecef_to_lat_lon_alt([3695041.,3695041.,3695041.])   # 45,45,0
-    # ecef_to_lat_lon_alt([6400000*.707,6400000*.707,1])  # 0.45,0
-    # ecef_to_lat_lon_alt([1,1,6400000])
-    # ecef_to_lat_lon_alt([1,6400000,1])
-    # ecef_to_lat_lon_alt([6400000,1,1])
-
+    '''
     sat_positions, sat_names = [], []
     user_pos = least_squares(o, navigations)
-
     for s in navigations:
         n = navigations[s][0]
         xyz = n.eph2pos(n.date)
@@ -147,11 +144,16 @@ if __name__ == "__main__":
         # print "User position:",ecef_to_lat_lon_alt(user_pos)
         print("Satellite's %s zenith angle: %.1f"%
               (s,sat_elev(user_pos,xyz)))
-
+    '''
     # satellites(user_pos,sat_positions,sat_names)
     user_pos = []
-    for num_o in range(180,250,10):
+    for num_o in range(190,250,10):
+        print
         user_pos += [least_squares(observations[num_o], navigations)]
     user_pos = [up[:3] for up in user_pos if up is not None]
+    delta = lambda x,y: (x - y)**2
+    dd =  map(delta,user_pos[1:],user_pos[:-1])
+    dd = [int(np.sqrt(sum(up))) for up in dd]
+    print dd
     print "User's position:\n",'\n'.join(map(lambda x: lla_string(ecef_to_lat_lon_alt(x)),user_pos))
-    on_map(map(ecef_to_lat_lon_alt,user_pos))
+    # on_map(map(ecef_to_lat_lon_alt,user_pos))

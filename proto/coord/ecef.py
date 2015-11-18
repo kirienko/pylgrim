@@ -25,7 +25,7 @@ def lat_lon_alt_to_ecef_xyz(R):
     return np.array([X,Y,Z])
 
 
-def ecef_to_lat_lon_alt(R, deg = True):
+def ecef_to_lat_lon_alt1(R, deg = True):
     """
     Fukushima implementation of the Bowring algorithm (2006),
     see [4] --
@@ -69,7 +69,7 @@ def ecef_to_lat_lon_alt(R, deg = True):
     return out
 
 
-def ecef_to_lat_lon_alt1(R, deg = True):
+def ecef_to_lat_lon_alt(R, deg = True):
     """
     Fukushima implementation of the Bowring algorithm,
     see [3] -- equations (C7) - (C12)

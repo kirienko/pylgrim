@@ -75,10 +75,10 @@ def least_squares(obs, navs, init_pos = ''):
     else:
         print "\n\tWarning: bad measurement!"
         return None
-
-    xyzt = np.zeros(4) # initial point: [0,0,0,0]
+    # if err == {}: err = {s[0]:0. for s in sats}
+    xyzt = [1e-10,1e-10,1e-10,0.] # initial point
     if len(init_pos):
-        xyzt = init_pos
+        xyzt = init_pos + [0.]
     for itr in range(10):
         # print "\t iter =", itr,
         # geometrical ranges
@@ -88,30 +88,31 @@ def least_squares(obs, navs, init_pos = ''):
         A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i],1) for i in xrange(len(sats))])
         AT = A.transpose()
         # form l-vector (sometimes `l` is denoted as `b`)
-        l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now) - tropmodel(lla,sat_elev(xyzt[:3],XYZs[i]))
+        l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now) - tropmodel(lla,sat_elev(xyzt[:3], XYZs[i]))
                        for i,s in enumerate(sats)]).transpose()
         # form x-vector
         x_hat_matrix = ((AT*A).I * AT * l)
         x_hat = x_hat_matrix.flatten().getA()[0]
         x_hat[3] /= c
-        # print "Q =",(AT*A).I.diagonal()
         # print "(x,y,z,cδt) =",x_hat
-        # iterate
         xyzt += x_hat
         # print lla_string(ecef_to_lat_lon_alt(xyzt)),"%.4f"%xyzt[3]
-        delta = np.sqrt(sum(map(lambda k: k**2,x_hat[:3])+[x_hat[3]/c]))
+        delta = np.sqrt(sum(map(lambda k: k**2,x_hat[:3])))
         if delta < 10.:
             break
-        # XYZs = np.array([nav_nearest_in_time(now,navs[s]).eph2pos(now-dt.timedelta(seconds = x_hat[3])) for s in sats])
-        now += dt.timedelta(seconds = x_hat[3])
+        # now += dt.timedelta(seconds=x_hat[3])
         XYZs = np.array([s[1].eph2pos(now) for s in sats])
 
     if len(init_pos):
+        # Q = (AT*A).I.diagonal().tolist()[0]
+        # print "Horizontal DOP: %.2f m" % np.sqrt(Q[0]**2 + Q[1]**2)
         # print l - A*x_hat_matrix
         return xyzt
     else:
+        # errors = {s[0]:(l - A*x_hat_matrix).tolist()[i][0] for i,s in enumerate(sats)}
+        # print errors
         # print "try with initial position",xyzt,
-        return least_squares(obs,navs,xyzt)
+        return least_squares(obs, navs, xyzt)
 
 if __name__ == "__main__":
 

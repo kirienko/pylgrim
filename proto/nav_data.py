@@ -96,8 +96,9 @@ class NavGPS(Nav):
     def time_offset(self, t_utc):
         t_sv = self.utc2gps(t_utc)
         # return self.A[0] + self.A[1]*(t_sv - self.date).total_seconds() + \
-        return self.A[0] + self.A[1]*(t_sv - self.date).total_seconds() + \
-               self.A[2]*(t_sv - self.date).total_seconds()**2 + \
+        delta = (t_sv - self.date).total_seconds()
+        return self.A[0] + self.A[1] * delta + \
+               self.A[2] * delta**2 + \
                self._time_rel_correction(t_sv)
 
     def eph2pos(self, t_utc):
@@ -129,7 +130,7 @@ class NavGPS(Nav):
         t = self.utc2gps(t_utc)
         a = sqrt_a**2           # print " 1) a = (⎷a)² = %.1f [m]" % a
         t_k = (t - self.epoch).total_seconds() - t_oe          # Time from ephemeris epoch
-        # print " 3) tₖ = t - t_oe = %f [s]" % t_k.seconds
+        # print " 3) tₖ = t - t_oe = %f [s]" % t_k
         E = self._ecc_anomaly(t_k)
         sat_lat_phi = atan2(sqrt(1 - e**2)*sin(E),cos(E)-e) + omega
         # print " 7) φ = arctan(α) + ω = %f [rad]" % sat_lat_phi

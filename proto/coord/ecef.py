@@ -28,16 +28,16 @@ def lat_lon_alt_to_ecef_xyz(R):
 def ecef_to_lat_lon_alt(R, deg = True):
     """
     Fukushima implementation of the Bowring algorithm (2006),
-    see [?] --
+    see [4] --
     :param R: (X,Y,Z) -- coordinates in ECEF (numpy array)
     :return:  (φ,θ,h) -- lat [deg], lon [deg], alt in WGS84 (numpy array)
     """
     # WGS 84 constants
     a = 6378137.0       # Equatorial Radius [m]
-    # b = 6356752.314245  # Polar Radius [m]
-    E = 0.08181919092890624 # e = sqrt(1-b²/a²)
-    e1 = sqrt(1 - E)            # e' = sqrt(1 - e²)
-    b = a * e1
+    b = 6356752.314245  # Polar Radius [m]
+    e = 0.08181919092890624 # e = sqrt(1-b²/a²)
+    E = e**2
+    e1 = sqrt(1 - e**2)            # e' = sqrt(1 - e²)
     if isinstance(R,list): R = np.array(R)
     p = sqrt(R[0]**2 + R[1]**2)             # (1) - sqrt(X² + Y²)
     az = abs(R[2])
@@ -62,7 +62,6 @@ def ecef_to_lat_lon_alt(R, deg = True):
     h = (p*Cc + az*Sn - b*sqrt(Sn**2 + Cn**2))/sqrt(Cc**2 + Sn**2)
     if deg:
         out = np.array([np.degrees(phi), np.degrees(theta), h])
-        # print "\nDEBUG: %s --> %s" % (xyz_string(R),lla_string(out))
     else:
         out = np.array([phi, theta, h])
     # if filter(isnan, out):
@@ -80,15 +79,13 @@ def ecef_to_lat_lon_alt1(R, deg = True):
     # WGS 84 constants
     a = 6378137.0       # Equatorial Radius [m]
     b = 6356752.314245  # Polar Radius [m]
-    e_sq = 0.08181919092890624 # e = sqrt(1-b²/a²)
-    # e1 = b/a            # e' = sqrt(1 - e²)
-    # print e1, sqrt(1-e_sq)
-    e1 = sqrt(1-e_sq)            # e' = sqrt(1 - e²)
-    c = a * e_sq        # (6)
+    e = 0.08181919092890624 # e = sqrt(1-b²/a²)
+    e1 = sqrt(1-e**2)            # e' = sqrt(1 - e²)
+    c = a * e**2        # (6)
     if isinstance(R,list): R = np.array(R)
     p = sqrt(R[0]**2 + R[1]**2)             # (1) - sqrt(X² + Y²)
     T = R[2]/(e1*p) or 1.              # (C8) - zero approximation
-    for i in range(5):
+    for i in range(10):
         C = np.power(1 + T**2,-0.5)         # (C9)
         S = C * T                           # (C9)
         T_new = (e1 * R[2] + c * S**3)/(p - c * C**3)   # (C7)
@@ -100,14 +97,11 @@ def ecef_to_lat_lon_alt1(R, deg = True):
     phi = np.math.atan2(T,e1)               # (C10)
     T1 = 1 + T**2
     if p > R[2]:                            # (C11)
-        h = sqrt(T1 - e_sq)/e1 * (p - a/sqrt(T1))
-        print "p > z, p = %d, z = %d, a/sqrt(T1) =" % (int(p),int(R[2])), a/sqrt(T1)
+        h = sqrt(T1 - e**2)/e1 * (p - a/sqrt(T1))
     else:                                   # (C12)
-        h = sqrt(T1 - e_sq) * (R[2]/T - b/sqrt(T1))
-        print "p < z"
+        h = sqrt(T1 - e**2) * (R[2]/T - b/sqrt(T1))
     if deg:
         out = np.array([np.degrees(phi), np.degrees(theta), h])
-        # print "DEBUG: %s --> %s" % (xyz_string(R),lla_string(out))
     else:
         out = np.array([phi, theta, h])
     return out

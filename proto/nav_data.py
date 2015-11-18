@@ -14,17 +14,6 @@ __author__ = 'kirienko'
 
 """
 Prototype of RINEX navigation file parser
-
-
-References:
-[1] Mohinder S. Grewal, Angus P. Andrews, Chris G. Bartone,
-    Global Navigation Satellite Systems Inertial Navigation and Integration,
-    Wiley-Interscience, 2013
-    http://ru.bookzz.org/book/2086274/def272
-[2] RTKLIB ver. 2.4.2 Manual
-    https://github.com/tomojitakasu/RTKLIB/blob/master/doc/manual_2.4.2.pdf
-[3] Fukushima, T. "Fast transform from geocentric to geodetic coordinates." Journal of Geodesy 73.11 (1999): 603-610.
-    http://calgary-skymap.googlecode.com/svn/trunk/users/John.Anglo/Fast%20transform.pdf
 """
 
 

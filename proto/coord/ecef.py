@@ -1,8 +1,8 @@
 #! encoding: UTF8
 import numpy as np
+import gpstk as G
 from numpy.linalg import norm
 from numpy.matrixlib import matrix
-
 from numpy.core.umath import sqrt, cos, sin, arcsin,isnan, degrees
 
 # from proto.rover_position import xyz_string, lla_string
@@ -106,6 +106,15 @@ def ecef_to_lat_lon_alt(R, deg = True):
         out = np.array([phi, theta, h])
     return out
 
+def ecef_to_geodetic(R):
+    """
+    ECEF to Geodetic using gpstk. Degrees only
+    """
+    p = G.Position(*R)
+    pos = np.array(G.Position.convertCartesianToGeodetic(p,6378137.0,0.006694380004260814))
+    if pos[0] > 180: pos[0] = pos[0] - 360
+    if pos[1] > 180: pos[1] = pos[1] - 360
+    return pos
 
 def sat_in_enu(R_u, R_sat):
     """

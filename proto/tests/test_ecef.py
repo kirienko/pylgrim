@@ -19,5 +19,11 @@ class TestEcef_to_lat_lon_alt(TestCase):
         assert_allclose(lla1, self.ans[0], rtol=1e-5, err_msg="Wrong ECEF to LatLon conversion")
         assert_allclose(lla2, self.ans[1], rtol=1e-5, err_msg="Wrong ECEF to LatLon conversion")
 
+    def test_ecef_to_geodetic(self):
+        lla1, lla2 = map(ecef_to_geodetic, self.inp)
+        assert_allclose(lla2, self.ans[1], rtol=1e-5, err_msg="Wrong ECEF to LatLon conversion")
+        assert_allclose(lla1, self.ans[0], rtol=1e-5, err_msg="Wrong ECEF to LatLon conversion")
+
+
 if __name__ == "__main__":
     main()

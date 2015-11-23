@@ -3,7 +3,7 @@
 
 import datetime as dt
 import numpy as np
-
+from numpy import sqrt
 from coord.ecef import ecef_to_lat_lon_alt, sat_elev
 from parse_rinex import parse_rinex
 from visualization.ellipsoid import satellites
@@ -34,6 +34,15 @@ def nav_nearest_in_time(t,nav_array):
     '''
     diff_array = [abs((n.date - n.utc2gps(t)).total_seconds()) for n in nav_array]
     return nav_array[diff_array.index(min(diff_array))]
+
+def distance(R1,R2):
+    """
+    Calculates euclidean distance (along the straight line)
+    :param R1: vector in ECEF
+    :param R2: vector in ECEF
+    :return: Euclidean distance between R1 and R2 [in meters]
+    """
+    return sqrt(sum(map(lambda x, y: (x-y)**2, R1, R2)))
 
 def least_squares(obs, navs, init_pos = ''):
     """
@@ -88,7 +97,7 @@ def least_squares(obs, navs, init_pos = ''):
         A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i],1) for i in xrange(len(sats))])
         AT = A.transpose()
         # form l-vector (sometimes `l` is denoted as `b`)
-        l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now) - tropmodel(lla,sat_elev(xyzt[:3], XYZs[i]))
+        l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now) - tropmodel(lla,sat_elev(xyzt[:3], XYZs[i], deg=False))
                        for i,s in enumerate(sats)]).transpose()
         # form x-vector
         x_hat_matrix = ((AT*A).I * AT * l)
@@ -152,9 +161,8 @@ if __name__ == "__main__":
         print
         user_pos += [least_squares(observations[num_o], navigations)]
     user_pos = [up[:3] for up in user_pos if up is not None]
-    delta = lambda x,y: (x - y)**2
-    dd =  map(delta,user_pos[1:],user_pos[:-1])
-    dd = [int(np.sqrt(sum(up))) for up in dd]
-    print dd
+    print map(int,map(distance,user_pos[1:],user_pos[:-1]))
     print "User's position:\n",'\n'.join(map(lambda x: lla_string(ecef_to_lat_lon_alt(x)),user_pos))
+    home = [2734549.4888,  1595964.1159,  5518311.2380]     # real (approximate) position
+    print "Distance to the real point: %.3f km" % (distance(home,user_pos[-1])/1000.)
     # on_map(map(ecef_to_lat_lon_alt,user_pos))

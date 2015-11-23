@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #! encoding: UTF8
-from math import cos, exp, pi
+from math import cos, exp, pi, radians
 
 __author__ = 'kirienko'
 
@@ -43,4 +43,7 @@ if __name__ == "__main__":
     pos = [pi/3,pi/6,100.]
     azel= pi/2
     for h in range(10):
-        print tropmodel(pos,azel,0.1*h)
+        print "Relative humidity: %2d %% \t delay: %.3f meters" %(h*10,tropmodel(pos,azel,0.1*h))
+    print(radians(90)),radians(180)
+    for h in range(90,0,-10):
+        print "angle: %2d %% \t delay: %.3f meters" %(h,tropmodel(pos,radians(h),50))

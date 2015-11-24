@@ -20,7 +20,7 @@ class ObsGPS():
         self.obs_types = obs_types
         self.obs_types_number = len(obs_types)
         self.sat_count = int(data[0][30:32])    # <-- equal to the number of measurements
-        self.sat_types = data[0][32:].strip()
+        self.sat_types = data[0][32:].strip().replace(' ', '0')
         self.PRN_number = [self.sat_types[i*3:(i+1)*3] for i in range(self.sat_count)]
 
         # Time of the observation       TODO: move to helper file

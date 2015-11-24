@@ -187,7 +187,7 @@ class PreciseNav():
         :param time: unnecessary parameter
         :return: ECEF coordinates of the satelite
         """
-        return self.xyzt[:3]
+        return self.xyzt[:3]*1e3
     def time_offset(self, time=0):
         """
         :param time: unnecessary parameter

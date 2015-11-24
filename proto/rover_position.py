@@ -94,17 +94,21 @@ def least_squares(obs, navs, init_pos = ''):
         lla = ecef_to_lat_lon_alt(xyzt, deg=False)
         rho = np.array([np.sqrt(sum([(x - xyzt[i])**2 for i,x in enumerate(XYZs[j])])) for j in xrange(len(sats))])
         # from A-matrix
-        A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i], [1]) for i in xrange(len(sats))])
+        A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i], [c]) for i in xrange(len(sats))])
         AT = A.transpose()
         # form l-vector (sometimes `l` is denoted as `b`)
+        # l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now+dt.timedelta(seconds=xyzt[3]))
+        #                - tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
+        #                for i, s in enumerate(sats)]).transpose()
+        # TODO: tropomodel
         l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now+dt.timedelta(seconds=xyzt[3]))
-                       - tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
                        for i, s in enumerate(sats)]).transpose()
         # form x-vector
         x_hat_matrix = ((AT*A).I * AT * l)
         x_hat = x_hat_matrix.flatten().getA()[0]
         x_hat[3] /= c
-        # print "(x,y,z,cδt) =",x_hat
+        # x_hat[3] *= 10    # time in seconds again
+        print "(x,y,z,cδt) =",", ".join(map(lambda x: "%.5f" %x, x_hat))
         xyzt += x_hat
         # print lla_string(ecef_to_lat_lon_alt(xyzt)),"%.4f"%xyzt[3]
         delta = np.sqrt(sum(map(lambda k: k**2,x_hat[:3])))

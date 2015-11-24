@@ -63,7 +63,11 @@ def parse_rinex(path):
             print "Satellites:", satel_type
             print "utc: A0 = %e, A1 = %e, T = %d, W = %d, leap seconds: %d" % (A0, A1, T, W, LEAP)
         except TypeError:
-            LEAP, A0, A1 = None, 0., 0.
+            A0, A1 = 0., 0.
+            if satel_type == 'mix':
+                LEAP = None
+            else:
+                LEAP = 0
 
     prefixes = {'gps': 'G', 'glo': 'R', 'mix': 'M'}
     sat_prefix = prefixes[satel_type]

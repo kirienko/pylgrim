@@ -2,8 +2,10 @@
 # ! encoding: UTF8
 import re
 from collections import defaultdict
-from nav_data import NavGPS, NavGLO
+
+from nav_data import NavGPS, NavGLO, PreciseNav
 from obs_data import ObsGPS
+from datetime import datetime
 
 __author__ = 'kirienko'
 
@@ -94,16 +96,40 @@ def parse_rinex(path):
         # print obs_types
 
 
-        # for h in header: print h,
         observations = []
         for j, h in enumerate(body):
-            # print j
-            if h[:4] == ' 15 ':
+            if 'G' in h or 'R' in h:
                 satellite_count = int(h[30:32])
                 observations += [ObsGPS(body[j:j + satellite_count + 1], obs_types)]
         return observations
     else:
         raise NotImplementedError
+
+
+def parse_sp3(path):
+    """
+    Parse SP3-file that contains precise ephemeris
+    :param path: path to *.sp3-file
+    :return: array of Nav-objects
+    """
+    with open(path) as fd:
+        data = fd.readlines()
+    print "\nParsing %s:" % path
+    # FIXME: GPS ONLY!
+    nav_dict = defaultdict(list)
+    for j, d in enumerate(data):
+        if d[0] == '*':
+            split = d.split()[1:]
+            y, m, d, H, M = map(int, split[:-1])
+            s = int(split[-1].split('.')[0])
+            mcs = int(split[-1].split('.')[1][:6])  # <-- probably it's zero anyway
+            date = datetime(y, m, d, H, M, s, mcs)
+        elif d[0] == 'P' and date:
+            prn, x, y, z, t = d.split()[1:]
+            nav_dict['G' + "%02d" % int(prn)] += [PreciseNav(date, (x, y, z, t))]
+        else:
+            continue
+    return nav_dict
 
 
 if __name__ == "__main__":
@@ -123,3 +149,4 @@ if __name__ == "__main__":
     # print "ΔX = %d km, ΔY = %d km, ΔZ = %d km" % tuple(int((r2-r1)) for r1,r2 in zip(R1,R2))
 
     observations = parse_rinex('../test_data/test.o')
+    precise = parse_sp3('../test_data/igs11484.sp3')

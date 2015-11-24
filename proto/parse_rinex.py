@@ -80,12 +80,14 @@ def parse_rinex(path):
     if rinex_type == 'nav':
         # Define UTC conversion data
         utc = get_header_line(header, 'delta-utc')
-        LEAP = int(get_header_line(header, 'leap')[:60])
-        A0, A1 = [float(h.replace('D', 'E')) for h in [utc[:22], utc[22:41]]]
-        T, W = map(int, utc[42:60].split())
-
-        print "Satellites:", satel_type
-        print "utc: A0 = %e, A1 = %e, T = %d, W = %d, leap seconds: %d" % (A0, A1, T, W, LEAP)
+        try:
+            LEAP = int(get_header_line(header, 'leap')[:60])
+            A0, A1 = [float(h.replace('D', 'E')) for h in [utc[:22], utc[22:41]]]
+            T, W = map(int, utc[42:60].split())
+            print "Satellites:", satel_type
+            print "utc: A0 = %e, A1 = %e, T = %d, W = %d, leap seconds: %d" % (A0, A1, T, W, LEAP)
+        except TypeError:
+            LEAP, A0, A1 = None, 0., 0.
 
     prefixes = {'gps': 'G', 'glo': 'R', 'mix': 'M'}
     sat_prefix = prefixes[satel_type]

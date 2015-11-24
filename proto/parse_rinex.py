@@ -1,15 +1,38 @@
 #!/usr/bin/python
-#! encoding: UTF8
-__author__ = 'kirienko'
-
+# ! encoding: UTF8
 import re
+from datetime import datetime
 from collections import defaultdict
-
 from nav_data import NavGPS, NavGLO
 from obs_data import ObsGPS
+__author__ = 'kirienko'
 
 
-def get_header_line(headr,property):
+
+
+def def_leap(date):
+    """
+    Return the number of leap seconds since 6/i/1980
+    :param date:
+    :return:
+    """
+    if date < datetime(1981, 6, 30, 23, 59, 59):
+        return 0
+    leap_list = [(1981, 6, 30), (1982, 6, 30), (1983, 6, 30),
+                 (1985, 6, 30), (1987, 12, 31), (1989, 12, 31),
+                 (1990, 12, 31), (1992, 6, 30), (1993, 6, 30),
+                 (1994, 6, 30), (1995, 12, 31), (1997, 6, 30),
+                 (1998, 12, 31), (2005, 12, 31), (2008, 12, 31),
+                 (2012, 6, 30), (2015, 6, 30)]
+    leap_dates = map(lambda x: datetime(x[0], x[1], x[2], 23, 59, 59), leap_list)
+    for j in xrange(len(leap_dates[:-1])):
+        if leap_dates[j] < date < leap_dates[j+1]:
+            return j+1
+    return len(leap_dates)
+
+
+
+def get_header_line(headr, property):
     '''
     :param headr: the header of the RINEX-file
     :param property: string-like property to search for (e.g. 'delta-utc')
@@ -19,6 +42,7 @@ def get_header_line(headr,property):
     for d in headr:
         if pattern.search(d):
             return d
+
 
 def parse_rinex(path):
     """
@@ -31,33 +55,39 @@ def parse_rinex(path):
 
     with open(path) as fd:
         data = fd.readlines()
-        for j,d in enumerate(data):
+        for j, d in enumerate(data):
             if "END OF HEADER" in d:
                 header_end = j
                 break
-    header, body = data[:header_end], data[header_end+1:]
+    header, body = data[:header_end], data[header_end + 1:]
 
     # Define RINEX file properties
-    rinex_version = re.findall('[0-9]'+'\.'+'[0-9]+',header[0][:60])[0]
-    pat_file = re.compile("nav|obs",re.IGNORECASE)
-    pat_satel = re.compile("gps|glo|mix",re.IGNORECASE)
-    rinex_type = re.findall(pat_file,header[0][:60])[0].lower()
-    satel_type = re.findall(pat_satel,header[0][:60])[0].lower()
+    rinex_version = re.findall('[0-9]' + '\.?' + '[0-9]*', header[0][:60])[0]
     print "\n\nParsing %s:" % path
     print "RINEX version:", rinex_version
+    pat_file = re.compile("nav|obs", re.IGNORECASE)
+    pat_satel = re.compile("gps|glo|mix", re.IGNORECASE)
+    rinex_type = re.findall(pat_file, header[0][:60])[0].lower()
     print "RINEX type:", rinex_type
+    try:
+        satel_type = re.findall(pat_satel, header[0][:60])[0].lower()
+    except IndexError:
+        pass
+    if float(rinex_version) < 2.11:
+        print("Warning: Rinex version is too old.")
+        satel_type = 'gps'
 
     if rinex_type == 'nav':
         # Define UTC conversion data
-        utc = get_header_line(header,'delta-utc')
-        LEAP = int(get_header_line(header,'leap')[:60])
-        A0,A1 = [float(h.replace('D','E')) for h in [utc[:22],utc[22:41]]]
-        T,W = map(int,utc[42:60].split())
+        utc = get_header_line(header, 'delta-utc')
+        LEAP = int(get_header_line(header, 'leap')[:60])
+        A0, A1 = [float(h.replace('D', 'E')) for h in [utc[:22], utc[22:41]]]
+        T, W = map(int, utc[42:60].split())
 
         print "Satellites:", satel_type
-        print "utc: A0 = %e, A1 = %e, T = %d, W = %d, leap seconds: %d" % (A0,A1,T,W, LEAP)
+        print "utc: A0 = %e, A1 = %e, T = %d, W = %d, leap seconds: %d" % (A0, A1, T, W, LEAP)
 
-    prefixes = {'gps':'G', 'glo':'R', 'mix': 'M'}
+    prefixes = {'gps': 'G', 'glo': 'R', 'mix': 'M'}
     sat_prefix = prefixes[satel_type]
 
     if rinex_type == 'nav' and satel_type != 'mix':
@@ -65,44 +95,43 @@ def parse_rinex(path):
         if satel_type == 'gps':
             if len(body) % 8 != 0:
                 print "Warning: wrong length of NAV file"
-            nav_list = [NavGPS(body[i*8:(i+1)*8],(LEAP,A0,A1)) for i in xrange(len(body)/8)]
+            nav_list = [NavGPS(body[i * 8:(i + 1) * 8], (LEAP, A0, A1)) for i in xrange(len(body) / 8)]
         elif satel_type == 'glo':
             if len(body) % 4 != 0:
                 print "Warning: wrong length of NAV file"
-            nav_list = [NavGLO(body[i*4:(i+1)*4],(LEAP,A0,A1)) for i in xrange(len(body)/4)]
+            nav_list = [NavGLO(body[i * 4:(i + 1) * 4], (LEAP, A0, A1)) for i in xrange(len(body) / 4)]
         nav_dict = defaultdict(list)
         for obj in nav_list:
-            nav_dict[sat_prefix+"%02d"%obj.PRN_number] += [obj]
+            nav_dict[sat_prefix + "%02d" % obj.PRN_number] += [obj]
         return nav_dict
 
     elif rinex_type == 'obs':
-        obs_types = get_header_line(header,"TYPES OF OBSERV").split()
+        obs_types = get_header_line(header, "TYPES OF OBSERV").split()
         number_of_obs_types = int(obs_types[0])
-        obs_types = obs_types[1:1+number_of_obs_types]
+        obs_types = obs_types[1:1 + number_of_obs_types]
         # print obs_types
 
 
         # for h in header: print h,
         observations = []
-        for j,h in enumerate(body):
+        for j, h in enumerate(body):
             # print j
             if h[:4] == ' 15 ':
                 satellite_count = int(h[30:32])
-                observations += [ObsGPS(body[j:j+satellite_count+1],obs_types)]
+                observations += [ObsGPS(body[j:j + satellite_count + 1], obs_types)]
         return observations
     else:
         raise NotImplementedError
 
 
 if __name__ == "__main__":
-
     navigations = parse_rinex('../test_data/test.n')
     # for k,v in navigations.items(): print k, [str(vv.date)for vv in v]
     # print "\nSatellites:", ', '.join(sorted(navigations.keys()))
     g = navigations['G05']
     # g = navigations['R04']
-    z1,z2 = sorted([g[0],g[1]],key=lambda x: x.date)
-    t1,t2 = z1.eph[8], z2.eph[8]
+    z1, z2 = sorted([g[0], g[1]], key=lambda x: x.date)
+    t1, t2 = z1.eph[8], z2.eph[8]
 
     # delta_t = dt.timedelta(seconds=t2-t1)
     # print "Δt = t1 - t2 = %s" % delta_t

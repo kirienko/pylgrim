@@ -1,35 +1,11 @@
 #!/usr/bin/python
 # ! encoding: UTF8
 import re
-from datetime import datetime
 from collections import defaultdict
 from nav_data import NavGPS, NavGLO
 from obs_data import ObsGPS
+
 __author__ = 'kirienko'
-
-
-
-
-def def_leap(date):
-    """
-    Return the number of leap seconds since 6/i/1980
-    :param date:
-    :return:
-    """
-    if date < datetime(1981, 6, 30, 23, 59, 59):
-        return 0
-    leap_list = [(1981, 6, 30), (1982, 6, 30), (1983, 6, 30),
-                 (1985, 6, 30), (1987, 12, 31), (1989, 12, 31),
-                 (1990, 12, 31), (1992, 6, 30), (1993, 6, 30),
-                 (1994, 6, 30), (1995, 12, 31), (1997, 6, 30),
-                 (1998, 12, 31), (2005, 12, 31), (2008, 12, 31),
-                 (2012, 6, 30), (2015, 6, 30)]
-    leap_dates = map(lambda x: datetime(x[0], x[1], x[2], 23, 59, 59), leap_list)
-    for j in xrange(len(leap_dates[:-1])):
-        if leap_dates[j] < date < leap_dates[j+1]:
-            return j+1
-    return len(leap_dates)
-
 
 
 def get_header_line(headr, property):

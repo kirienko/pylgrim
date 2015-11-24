@@ -1,5 +1,5 @@
 from unittest import TestCase
-from proto.parse_rinex import def_leap
+from proto.nav_data import def_leap
 from datetime import datetime
 
 

@@ -3,6 +3,7 @@
 
 import datetime as dt
 import numpy as np
+from datetime import datetime
 from math import sqrt, sin, cos, atan2
 
 # Origin of GPS time
@@ -48,6 +49,8 @@ class Nav():
         sec_msec = "%.3f" % float(self.raw_data[6])
         s,ms = map(int,sec_msec.split('.'))
         self.date = dt.datetime(*(map(int,self.raw_data[1:6])+[s,ms]))  # t_oc
+        if self.leap is None:
+            self.leap = def_leap(self.date)
 
         try:
             self.eph = map(float,self.raw_data[10:27])  # broadcast ephemeris
@@ -189,3 +192,24 @@ if __name__ == "__main__":
     o = NavGPS(body[:8])
     # print o.eph2pos()
     print o.week
+
+
+def def_leap(date):
+    """
+    Return the number of leap seconds since 6/i/1980
+    :param date: datetime instance
+    :return: leap seconds for date (int)
+    """
+    if date < datetime(1981, 6, 30, 23, 59, 59):
+        return 0
+    leap_list = [(1981, 6, 30), (1982, 6, 30), (1983, 6, 30),
+                 (1985, 6, 30), (1987, 12, 31), (1989, 12, 31),
+                 (1990, 12, 31), (1992, 6, 30), (1993, 6, 30),
+                 (1994, 6, 30), (1995, 12, 31), (1997, 6, 30),
+                 (1998, 12, 31), (2005, 12, 31), (2008, 12, 31),
+                 (2012, 6, 30), (2015, 6, 30)]
+    leap_dates = map(lambda x: datetime(x[0], x[1], x[2], 23, 59, 59), leap_list)
+    for j in xrange(len(leap_dates[:-1])):
+        if leap_dates[j] < date < leap_dates[j+1]:
+            return j+1
+    return len(leap_dates)

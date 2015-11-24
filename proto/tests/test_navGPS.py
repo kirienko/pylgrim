@@ -7,6 +7,9 @@ from datetime import timedelta
 
 
 class TestNavGPS(TestCase):
+    """
+    Source: http://web.ics.purdue.edu/~ecalais/teaching/gps_geodesy/lab_4.pdf
+    """
     def setUp(self):
         nav_file = '../../test_data/epgga2.010'
         navigations = parse_rinex(nav_file)

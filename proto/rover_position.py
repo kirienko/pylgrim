@@ -91,14 +91,15 @@ def least_squares(obs, navs, init_pos = ''):
     for itr in range(10):
         # print "\t iter =", itr,
         # geometrical ranges
-        lla = ecef_to_lat_lon_alt(xyzt)
+        lla = ecef_to_lat_lon_alt(xyzt, deg=False)
         rho = np.array([np.sqrt(sum([(x - xyzt[i])**2 for i,x in enumerate(XYZs[j])])) for j in xrange(len(sats))])
         # from A-matrix
-        A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i],1) for i in xrange(len(sats))])
+        A = np.matrix([np.append((xyzt[:3] - XYZs[i])/rho[i], [1]) for i in xrange(len(sats))])
         AT = A.transpose()
         # form l-vector (sometimes `l` is denoted as `b`)
-        l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now) - tropmodel(lla,sat_elev(xyzt[:3], XYZs[i], deg=False))
-                       for i,s in enumerate(sats)]).transpose()
+        l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now+dt.timedelta(seconds=xyzt[3]))
+                       - tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
+                       for i, s in enumerate(sats)]).transpose()
         # form x-vector
         x_hat_matrix = ((AT*A).I * AT * l)
         x_hat = x_hat_matrix.flatten().getA()[0]
@@ -110,7 +111,7 @@ def least_squares(obs, navs, init_pos = ''):
         if delta < 10.:
             break
         # now += dt.timedelta(seconds=x_hat[3])
-        XYZs = np.array([s[1].eph2pos(now) for s in sats])
+        XYZs = np.array([s[1].eph2pos(now+dt.timedelta(seconds=x_hat[3])) for s in sats])
 
     if len(init_pos):
         # Q = (AT*A).I.diagonal().tolist()[0]
@@ -142,19 +143,6 @@ if __name__ == "__main__":
     print o.sat_types
 
 
-
-    '''
-    sat_positions, sat_names = [], []
-    user_pos = least_squares(o, navigations)
-    for s in navigations:
-        n = navigations[s][0]
-        xyz = n.eph2pos(n.date)
-        sat_positions += [xyz]
-        sat_names += [s]
-        # print "User position:",ecef_to_lat_lon_alt(user_pos)
-        print("Satellite's %s zenith angle: %.1f"%
-              (s,sat_elev(user_pos,xyz)))
-    '''
     # satellites(user_pos,sat_positions,sat_names)
     user_pos = []
     for num_o in range(190,250,10):
@@ -164,5 +152,5 @@ if __name__ == "__main__":
     print map(int,map(distance,user_pos[1:],user_pos[:-1]))
     print "User's position:\n",'\n'.join(map(lambda x: lla_string(ecef_to_lat_lon_alt(x)),user_pos))
     home = [2734549.4888,  1595964.1159,  5518311.2380]     # real (approximate) position
-    print "Distance to the real point: %.3f km" % (distance(home,user_pos[-1])/1000.)
+    print "Distance to the real point: %.6f km" % (distance(home,user_pos[-1])/1000.)
     # on_map(map(ecef_to_lat_lon_alt,user_pos))

@@ -8,7 +8,7 @@ __author__ = 'kirienko'
 ## based on RTKlib
 
 # def tropmodel(time, pos, azel, humi=0.75):
-def tropmodel(pos, el, humi=0.75):
+def tropmodel(pos, el, humi=0.75, temp0 = 15.0):
     """
     Function from RTKlib: https://github.com/tomojitakasu/RTKLIB/blob/master/src/rtkcmn.c#L3362-3362
         with no changes
@@ -16,9 +16,10 @@ def tropmodel(pos, el, humi=0.75):
     :param pos:     receiver position {lat,lon,h} (rad,m)
     :param el:    azimuth/elevation angle {az,el} (rad) -- we do not use az
     :param humi:    relative humidity
+    :param temp0:   temperature (Celsius)
     :return:        tropospheric delay (m)
     """
-    temp0 = 15.0  # temparature at sea level
+    # temp0 = 15.0  # temparature at sea level
     # double hgt,pres,temp,e,z,trph,trpw;
 
     # if (pos[2]<-100.0||1E4<pos[2]||el[1]<=0) return 0.0;

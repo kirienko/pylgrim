@@ -46,7 +46,7 @@ class Nav():
         if int(self.raw_data[1]) < 2000: self.raw_data[1] = '20' + self.raw_data[1]
         sec_msec = "%.3f" % float(self.raw_data[6])
         s, ms = map(int, sec_msec.split('.'))
-        self.date = dt.datetime(*(map(int, self.raw_data[1:6]) + [s, ms]))  # t_oc
+        self.date = dt.datetime(*(map(int, self.raw_data[1:6]) + [s, ms * 1000]))  # t_oc
         if self.leap is None:
             self.leap = def_leap(self.date)
 
@@ -67,6 +67,7 @@ class NavGPS(Nav):
             delta_t += 604800
         # return t + dt.timedelta(seconds= self.A0 + self.A[0] + self.leap + self.A[1]*delta_t)
         return t + dt.timedelta(seconds=self.A0 + self.leap + self.A1 * delta_t)
+        # return t + dt.timedelta(seconds=self.A0 + self.A1 * delta_t)
 
     def _time_rel_correction(self, t_sv):
         """
@@ -100,9 +101,11 @@ class NavGPS(Nav):
         :param t_utc:
         :return: Satellite clock bias
         """
-        t_sv = self.utc2gps(t_utc)
+        # t_sv = self.utc2gps(t_utc)
+        t_sv = t_utc
         # return self.A[0] + self.A[1]*(t_sv - self.date).total_seconds() + \
         delta = (t_sv - self.date).total_seconds()
+        # print "δt = %d:%02.f min" % (int(delta/60),abs(delta%int(delta/60)))
         return self.A[0] + self.A[1] * delta + \
                self.A[2] * delta ** 2  # + \ TODO: relativistic correction!
         # self._time_rel_correction(t_sv)
@@ -115,25 +118,26 @@ class NavGPS(Nav):
         :param:  t_utc = time of measurement (to be converted to seconds from t_oe)
         :return: r = [Xₖ, Yₖ, Zₖ] - coordinates of satellite in ECEF
         """
-        # IODE      = self.eph[0]     # Amplitude of sine correction to orbital radius
-        C_rs = self.eph[1]  # Amplitude of sine correction to orbital radius
-        # delta_n   = self.eph[2]     # Δn - Mean motion correction [rad/s]
-        # M_0       = self.eph[3]     # M₀ - Mean anomaly (at time t_oe )
-        C_uc = self.eph[4]  # Amplitude of cosine correction to argument of latitude
-        e = self.eph[5]  # Eccentricity
-        C_us = self.eph[6]  # Amplitude of sine correction to argument of latitude
-        sqrt_a = self.eph[7]  # Square root of semimajor axis
-        t_oe = self.eph[8]  # Reference time of ephemeris from the beginning of GPS week
-        C_ic = self.eph[9]  # Amplitude of cosine correction to inclination angle
-        Omega = self.eph[10]  # Ω₀ - Longitude of the ascending node (at weekly epoch)
-        C_is = self.eph[11]  # Amplitude of sine correction to inclination angle
-        i_0 = self.eph[12]  # i₀ - Inclination angle (at time t_oe)
-        C_rc = self.eph[13]  # Amplitude of cosine correction to orbital radius
-        omega = self.eph[14]  # ω - Argument of perigee (at time t_oe)
+        # IODE= self.eph[0]     # Amplitude of sine correction to orbital radius
+        C_rs = self.eph[1]      # Amplitude of sine correction to orbital radius
+        # delta_n = self.eph[2]     # Δn - Mean motion correction [rad/s]
+        # M_0 = self.eph[3]     # M₀ - Mean anomaly (at time t_oe )
+        C_uc = self.eph[4]      # Amplitude of cosine correction to argument of latitude
+        e = self.eph[5]         # Eccentricity
+        C_us = self.eph[6]      # Amplitude of sine correction to argument of latitude
+        sqrt_a = self.eph[7]    # Square root of semimajor axis
+        t_oe = self.eph[8]      # Reference time of ephemeris from the beginning of GPS week
+        C_ic = self.eph[9]      # Amplitude of cosine correction to inclination angle
+        Omega = self.eph[10]    # Ω₀ - Longitude of the ascending node (at weekly epoch)
+        C_is = self.eph[11]     # Amplitude of sine correction to inclination angle
+        i_0 = self.eph[12]      # i₀ - Inclination angle (at time t_oe)
+        C_rc = self.eph[13]     # Amplitude of cosine correction to orbital radius
+        omega = self.eph[14]    # ω - Argument of perigee (at time t_oe)
         Omega_dot = self.eph[15]  # dΩ/dt - Rate of change of longitude of the ascending node
-        IDOT = self.eph[16]  # Rate of change of inclination angle (i.e., di/dt)
+        IDOT = self.eph[16]     # Rate of change of inclination angle (i.e., di/dt)
 
-        t = self.utc2gps(t_utc)
+        # t = self.utc2gps(t_utc)
+        t = t_utc  # FIXME
         a = sqrt_a ** 2  # print " 1) a = (⎷a)² = %.1f [m]" % a
         t_k = (t - self.epoch).total_seconds() - t_oe  # Time from ephemeris epoch
         # print " 3) tₖ = t - t_oe = %f [s]" % t_k
@@ -178,22 +182,25 @@ class NavGLO(Nav):
         t_k = (self.date - t).total_seconds()
         return r_0 + v_0 * t_k + a_0 * t_k ** 2 / 2
 
+
 class PreciseNav():
     def __init__(self, date, sat_position):
         self.date = date
-        self.xyzt = np.array(map(float,sat_position))
+        self.xyzt = np.array(map(float, sat_position))
+
     def eph2pos(self, time=0):
         """
         :param time: unnecessary parameter
         :return: ECEF coordinates of the satelite
         """
-        return self.xyzt[:3]*1e3
+        return self.xyzt[:3] * 1e3
+
     def time_offset(self, time=0):
         """
         :param time: unnecessary parameter
         :return: satellite clock bias [sec]
         """
-        return self.xyzt[3]/1e6
+        return self.xyzt[3] / 1e6
 
 
 def def_leap(date):

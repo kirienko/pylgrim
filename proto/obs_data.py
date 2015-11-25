@@ -20,8 +20,12 @@ class ObsGPS():
         self.obs_types = obs_types
         self.obs_types_number = len(obs_types)
         self.sat_count = int(data[0][30:32])    # <-- equal to the number of measurements
-        self.sat_types = data[0][32:].strip().replace(' ', '0')
-        self.PRN_number = [self.sat_types[i*3:(i+1)*3] for i in range(self.sat_count)]
+        if self.sat_count > 12:
+            # concatenate lines 0 and one in ```raw_data```:
+            self.raw_data[0] = " " + self.raw_data[0].strip() + self.raw_data[1].strip()
+            self.raw_data.remove(self.raw_data[1])
+        self.sat_types = self.raw_data[0][32:].strip().replace(' ', '0')
+        self.PRN_number = [self.sat_types[i*3:(i+1)*3] for i in xrange(self.sat_count)]
 
         # Time of the observation       TODO: move to helper file
         str_date = data[0].split()[:6]
@@ -53,7 +57,6 @@ class ObsGPS():
                     ans = None
                 return ans
 
-        # self.obs_data = dict((d,[float(x) for x in col(self.raw_data[1:], i) if not re.match('\s+',x)])
         self.obs_data = dict((d,[is_def(x) for x in col(self.raw_data[1:], i)])
                              for i,d in enumerate(self.obs_types))
 
@@ -99,42 +102,4 @@ if __name__ == "__main__":
         if header_end_marker in d:
             header_end = j
     header, body = data[:header_end],data[header_end+1:]
-
-    obs_types = get_header_line(header,"TYPES OF OBSERV").split()
-    number_of_obs_types = int(obs_types[0])
-    obs_types = obs_types[1:1+number_of_obs_types]
-    # print obs_types
-
-
-    # for h in header: print h,
-    observations = []
-    for j,h in enumerate(body):
-        # print j
-        if h[:4] == ' 15 ':
-            satellite_count = int(h[30:32])
-            observations += [ObsGPS(body[j:j+satellite_count+1],obs_types)]
-
-
-    print len(observations)
-    o = observations[250]
-    print o.sat_types
-    sats = ['G05', 'G16', 'G18', 'G21']
-    for s in sats:
-        print "C1 from %s at time %s: %f [m]"% (s,str(o.date.time()),o.obs_data['C1'][sats.index(s)])
-    """
-    needs = ['C1', 'P2', 'L1', 'L2']
-    for i in xrange(o.sat_count):
-        if o.sat_types[i][0] == 'G':    # GPS-only observations, not GLONASS
-            iono_free_pr = ionofree_pseudorange(nu_1_G,nu_2_G,o.obs_data['C1'][i],o.obs_data['P2'][i])
-            iono_free_L  = ionofree_pseudorange(nu_1_G,nu_2_G,o.obs_data['L1'][i]*l1_G,o.obs_data['L2'][i]*l2_G)
-            print
-            print '\t'.join(map(lambda x: "%s = %f" % (x,o.obs_data[x][i]),needs))
-            # print "Δρ₁ = C₁ - L₁λ₁ = %.3f m" % (o.obs_data['C1'][i] - o.obs_data['L1'][i]*l1_G)
-            # print "Δρ₂ = C₂ - L₂λ₂ = %.3f m" % (o.obs_data['P2'][i] - o.obs_data['L2'][i]*l2_G)
-            print "k = Δρ₁ ν₁² = (C₁ - ρ) ν₁² = %e " % ((o.obs_data['C1'][i] - iono_free_pr) * nu_1_G**2)
-            print "k = Δρ₂ ν₂² = (P₂ - ρ) ν₂² = %e " % ((o.obs_data['P2'][i] - iono_free_pr) * nu_2_G**2)
-
-            print "k = ΔL₁ ν₁² = (L₁λ - L) ν₁² = %e " % ((o.obs_data['L1'][i]*l1_G - iono_free_L) * nu_1_G**2)
-            print "k = ΔL₂ ν₂² = (L₂λ - L) ν₂² = %e " % ((o.obs_data['L2'][i]*l2_G - iono_free_L) * nu_2_G**2)
-    """
 

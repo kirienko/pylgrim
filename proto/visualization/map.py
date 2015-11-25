@@ -1,22 +1,22 @@
 #! encoding: UTF8
 
 import numpy as np
-
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.basemap import Basemap
 
-def draw_inset(plt,m,pos,lat,lon):
+
+def draw_inset(plt, m, pos, lat, lon):
     ax = plt.subplot(111)
     zoom = 50
     axins = zoomed_inset_axes(ax, zoom, loc=1)
-    m.plot(lon,lat,'.b--',zorder=10,latlon=True)
-    m.scatter(lon,lat,      # longitude first!
+    m.plot(lon, lat, '.b--', zorder=10, latlon=True)
+    m.scatter(lon, lat,  # longitude first!
               latlon=True,  # lat and long in degrees
-              zorder=11)   # on top of all
-    x1, y1 = m(lon[1]-0.005,lat[0]-0.0025)
-    x2, y2 = m(lon[1]+0.005,lat[0]+0.0025)
+              zorder=11)  # on top of all
+    x1, y1 = m(lon[1] - 0.005, lat[0] - 0.0025)
+    x2, y2 = m(lon[1] + 0.005, lat[0] + 0.0025)
     axins.set_xlim(x1, x2)
     axins.set_ylim(y1, y2)
 
@@ -26,8 +26,9 @@ def draw_inset(plt,m,pos,lat,lon):
     # connecting lines between the bbox and the inset axes area
     mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
 
-def on_map(positions,proj='cass'):
-    '''
+
+def on_map(positions, scale=1e5, proj='cass'):
+    """
     The supported projections are:
      cea              Cylindrical Equal Area
      mbtfpq           McBryde-Thomas Flat-Polar Quartic
@@ -63,10 +64,11 @@ def on_map(positions,proj='cass'):
      laea             Lambert Azimuthal Equal Area
      splaea           South-Polar Lambert Azimuthal
      robin            Robinson
-    :param pos:
-    :param proj:
-    :return:
-    '''
+    :param positions:
+    :param proj: projection type
+    :param scale:
+    :return: None
+    """
     # llcrnrlat,llcrnrlon,urcrnrlat,urcrnrlon
     # are the lat/lon values of the lower left and upper right corners
     # of the map.
@@ -77,38 +79,46 @@ def on_map(positions,proj='cass'):
     # can get the identical map this way (by specifying width and
     # height instead of lat/lon corners)
     lat, lon = [p[0] for p in positions], [p[1] for p in positions]
-    pos = (sum(lat)/len(lat), sum(lon)/len(lon))
+    pos = (sum(lat) / len(lat), sum(lon) / len(lon))
 
-    map_width = map_height = 2e5    # optimized for the scale: 1e5
-
-    m = Basemap(width=map_width,height=map_height,\
-                resolution='i',     # 'c', 'l', 'i', 'h', 'f'
-                projection=proj,lon_0=pos[1],lat_0=pos[0])
+    map_width = map_height = scale  # optimized for the scale: 1e5
+    if map_width > 9e4:
+        res = 'h'
+        scale_untis, scale_factor = 'km', 1e4
+    else:
+        res = 'c'
+        scale_untis, scale_factor = 'm', 5
+    m = Basemap(width=map_width, height=map_height,
+                resolution=res,  # 'c', 'l', 'i', 'h', 'f'
+                projection=proj, lon_0=pos[1], lat_0=pos[0])
     m.drawcoastlines()
-    m.fillcontinents(color='coral',lake_color='aqua')
+    m.fillcontinents(color='coral', lake_color='aqua')
     # draw parallels and meridians.
-    m.drawparallels(np.arange(int(pos[0])-10,int(pos[0])+10,1.),labels=[1,0,0,1])
-    m.drawmeridians(np.arange(int(pos[1])-10,int(pos[1])+10,1.),labels=[1,0,0,1])
+    m.drawparallels(np.arange(int(pos[0]) - 10, int(pos[0]) + 10, 1.), labels=[1, 0, 0, 1])
+    m.drawmeridians(np.arange(int(pos[1]) - 10, int(pos[1]) + 10, 1.), labels=[1, 0, 0, 1])
     m.drawmapboundary(fill_color='aqua')
-    m.plot(lon,lat,'.b--',zorder=10,latlon=True)
-
-    m.scatter(lon,lat,      # longitude first!
-              color='r',
+    m.plot(lon, lat, '.b--', zorder=10, latlon=True)
+    cm = plt.cm.get_cmap('YlOrRd')
+    colors = range(len(positions))
+    m.scatter(lon, lat,  # longitude first!
+              c=colors,
+              cmap=cm,
               latlon=True,  # lat and long in degrees
-              zorder=11)   # on top of all
-    x0,y0 = m(pos[1],pos[0])    # center os the plot
-    lon_lab, lat_lab = m(x0+0.4*map_width,y0-0.4*map_width,inverse=True)
+              zorder=11)  # on top of all
+    x0, y0 = m(pos[1], pos[0])  # center os the plot
+    lon_lab, lat_lab = m(x0 + 0.4 * map_width, y0 - 0.4 * map_width, inverse=True)
     m.drawmapscale(
-        lon_lab,lat_lab,  # where to place scale
-        pos[1],pos[0],          # where to measure scale
-        map_width/1e4,                     # length
-        units='km', fontsize=10,
+        lon_lab, lat_lab,  # where to place scale
+        pos[1], pos[0],  # where to measure scale
+        length=map_width / scale_factor,
+        units=scale_untis, fontsize=10,
         barstyle='fancy', labelstyle='simple',
         fillcolor1='w', fillcolor2='#000000',
         fontcolor='#000000',
         zorder=20)
-    m.drawmapscale(pos[1],pos[0],pos[0],pos[1],20,barstyle='simple',zorder=50)
+    m.drawmapscale(pos[1], pos[0], pos[0], pos[1], 10, barstyle='simple', fontsize=10, zorder=50)
     plt.title(u'Map centered at (%.1fN, %.1fE)' % pos)
+    plt.colorbar()
     # draw inset with starting position
     # draw_inset(plt,m,pos,lat,lon)
     plt.show()

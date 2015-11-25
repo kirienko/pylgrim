@@ -27,7 +27,7 @@ class ObsGPS():
         str_date = data[0].split()[:6]
         if int(str_date[0]) < 2000:
             str_date[0] = '20'+str_date[0]
-        sec_msec = "%.3f" % float(str_date[-1])
+        sec_msec = "%.6f" % float(str_date[-1])
         s, ms = map(int,sec_msec.split('.'))
         self.date = dt.datetime(*(map(int,str_date[:-1])+[s, ms]))
 

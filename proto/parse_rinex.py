@@ -98,9 +98,12 @@ def parse_rinex(path):
 
         observations = []
         for j, h in enumerate(body):
-            if 'G' in h or 'R' in h:
+            if 'G' in h or 'R' in h and h[:20] != ' '*20:
                 satellite_count = int(h[30:32])
-                observations += [ObsGPS(body[j:j + satellite_count + 1], obs_types)]
+                if satellite_count > 12:    # sometimes it happens!
+                    observations += [ObsGPS(body[j:j + satellite_count + 2], obs_types)]
+                else:
+                    observations += [ObsGPS(body[j:j + satellite_count + 1], obs_types)]
         return observations
     else:
         raise NotImplementedError

@@ -85,17 +85,19 @@ def least_squares(obs, navs, init_pos=''):
         # get XYZ-coords of satellites
         XYZs = np.array([s[1].eph2pos(now) for s in sats])
         # print "XYZs =",XYZs
-    elif len(sats) <= 3 and len(init_pos):  # FIXME: rewise this logic
+    # elif len(sats) <= 3 and len(init_pos):  # FIXME: rewise this logic
+    elif len(sats) <= 3:  # FIXME: rewise this logic
         print "\n\tWarning: too few satellites:", len(sats)
         return None
-    else:
-        print "\n\tWarning: bad measurement!"
-        return None
+    # else:
+    #     print "\n\tWarning: bad measurement!"
+    #     print "sats:", sats, init_pos
+    #     return None
     # if err == {}: err = {s[0]:0. for s in sats}
     # xyzt = [1e-10,1e-10,1e-10,0.] # initial point
     xyzt = [2734540., 1595960., 5518310., 0]  # initial point # <-- TODO: from RINEX
-    if len(init_pos):
-        xyzt = init_pos + [0.]
+    # if len(init_pos):
+    #     xyzt = init_pos + [0.]
     for itr in range(10):
         # print "\t iter =", itr,
         # geometrical ranges
@@ -123,21 +125,21 @@ def least_squares(obs, navs, init_pos=''):
         # now += dt.timedelta(seconds=x_hat[3])
         XYZs = np.array([s[1].eph2pos(now + dt.timedelta(seconds=x_hat[3])) for s in sats])
 
-    if len(init_pos):
-        phi, t, h = ecef_to_lat_lon_alt(xyzt, deg=False)
-        R = np.matrix([[-sin(phi) * cos(t), -sin(phi) * sin(t), cos(phi)],
-                       [-sin(t), cos(t), 0],
-                       [cos(phi) * cos(t), cos(phi) * sin(t), sin(phi)]])
-        Q = (AT * A).I
-        S_T = R * Q[0:3, 0:3] * R.transpose()
-        GDOP = sqrt(sum(S_T.diagonal().getA()[0]) + Q[3, 3])
-        # print "GDOP = %.3f, VDOP = %.3f" % (GDOP,sqrt(S_T[2,2]))
-        return xyzt
-    else:
+    # if len(init_pos):
+    phi, t, h = ecef_to_lat_lon_alt(xyzt, deg=False)
+    R = np.matrix([[-sin(phi) * cos(t), -sin(phi) * sin(t), cos(phi)],
+                   [-sin(t), cos(t), 0],
+                   [cos(phi) * cos(t), cos(phi) * sin(t), sin(phi)]])
+    Q = (AT * A).I
+    S_T = R * Q[0:3, 0:3] * R.transpose()
+    GDOP = sqrt(sum(S_T.diagonal().getA()[0]) + Q[3, 3])
+    # print "GDOP = %.3f, VDOP = %.3f" % (GDOP,sqrt(S_T[2,2]))
+    return xyzt
+    # else:
         # errors = {s[0]:(l - A*x_hat_matrix).tolist()[i][0] for i,s in enumerate(sats)}
         # print errors
         # print "try with initial position",xyzt,
-        return least_squares(obs, navs, xyzt)
+        # return least_squares(obs, navs, xyzt)
 
 
 if __name__ == "__main__":
@@ -170,4 +172,4 @@ if __name__ == "__main__":
     # print "User's position:\n",'\n'.join(map(lambda x: lla_string(ecef_to_lat_lon_alt(x)),user_pos))
     home = [2734549.4888, 1595964.1159, 5518311.2380]  # real (approximate) position
     print "Distance to the real point: %.6f km" % (distance(home, user_pos[-1]) / 1000.)
-    on_map(map(ecef_to_lat_lon_alt, user_pos), scale=1e2)
+    # on_map(map(ecef_to_lat_lon_alt, user_pos), scale=1e2)

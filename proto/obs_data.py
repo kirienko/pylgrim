@@ -8,7 +8,7 @@ import re
 c = 299792428  # speed of light
 nu_1_G, nu_2_G = 1575.42e6, 1227.6e6  # GPS L1 and L2 frequencies
 l1_G, l2_G = c / nu_1_G, c / nu_2_G
-
+isfloat = re.compile("\s{,3}\d+.*")
 
 class ObsGPS():
     def __init__(self, data, obs_types):
@@ -42,7 +42,7 @@ class ObsGPS():
             """
             return [matr[j][16 * i:16 * i + 14] for j in xrange(len(matr))]
 
-        def is_def(x):
+        def is_def1(x):
             """
             If this measurement exists
             """
@@ -52,6 +52,14 @@ class ObsGPS():
                 # print "xxx:",re.match('\s+',x)
                 ans = None
             return ans
+
+
+        def is_def(x):
+            if isfloat.match(x):
+                return float(x)
+            else:
+                return None
+
 
         self.obs_data = dict((d, [is_def(x) for x in col(self.raw_data[1:], i)])
                              for i, d in enumerate(self.obs_types))

@@ -5,7 +5,6 @@ import datetime as dt
 import numpy as np
 from numpy import sqrt
 from numpy.ma import sin, cos
-
 from coord.ecef import ecef_to_lat_lon_alt, sat_elev
 from parse_rinex import parse_rinex
 from visualization.ellipsoid import satellites
@@ -31,14 +30,15 @@ def xyz_string(R):
 
 
 def nav_nearest_in_time(t, nav_array):
-    '''
+    """
     From array of NavGPS objects returns the one
         which ephemeris are the closets in time to ``t``
     :param t: UTC time
     :param nav_array:
     :return:
-    '''
-    diff_array = [abs((n.date - n.utc2gps(t)).total_seconds()) for n in nav_array]
+    """
+    # diff_array = [abs((n.date - n.utc2gps(t)).total_seconds()) for n in nav_array]
+    diff_array = [abs((n.date - t).total_seconds()) for n in nav_array]
     return nav_array[diff_array.index(min(diff_array))]
 
 
@@ -61,7 +61,7 @@ def least_squares(obs, navs, init_pos=''):
     :return: rover's position in ecef [m]
     """
     c = 299792428  # speed of light
-    elev_mask = 10  # satellite elevation mask
+    elev_mask = 15  # satellite elevation mask
     now = obs.date
     # print "now:", now
     # Find all possible satellites N
@@ -73,7 +73,7 @@ def least_squares(obs, navs, init_pos=''):
             if len(init_pos):
                 sat_coord = nnt.eph2pos(now)
                 if sat_elev(init_pos, sat_coord) < elev_mask:
-                    print "Satellite %s excluded" % r
+                    # print "Satellite %s excluded" % r
                     continue
             # sats += [r]
             sats += [(r, nnt)]
@@ -82,9 +82,7 @@ def least_squares(obs, navs, init_pos=''):
     if len(sats) > 3:
         # observed [iono-free] pseudoranges
         P = np.array([obs.ionofree_pseudorange(s[0]) for s in sats])
-        # print "P =",P
         # get XYZ-coords of satellites
-        # XYZs = np.array([nav_nearest_in_time(now,navs[s]).eph2pos(now) for s in sats])
         XYZs = np.array([s[1].eph2pos(now) for s in sats])
         # print "XYZs =",XYZs
     elif len(sats) <= 3 and len(init_pos):  # FIXME: rewise this logic
@@ -95,7 +93,7 @@ def least_squares(obs, navs, init_pos=''):
         return None
     # if err == {}: err = {s[0]:0. for s in sats}
     # xyzt = [1e-10,1e-10,1e-10,0.] # initial point
-    xyzt = [2734540., 1595960., 5518310., 0]  # initial point
+    xyzt = [2734540., 1595960., 5518310., 0]  # initial point # <-- TODO: from RINEX
     if len(init_pos):
         xyzt = init_pos + [0.]
     for itr in range(10):
@@ -105,11 +103,8 @@ def least_squares(obs, navs, init_pos=''):
         rho = np.array([np.sqrt(sum([(x - xyzt[i]) ** 2 for i, x in enumerate(XYZs[j])])) for j in xrange(len(sats))])
         # print "ρ =", rho
         # form l-vector (sometimes `l` is denoted as `b`)
-        # l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now+dt.timedelta(seconds=xyzt[3]))
-        #                - tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
-        #                for i, s in enumerate(sats)]).transpose()
-        # TODO: tropomodel
         l = np.matrix([P[i] - rho[i] + c * s[1].time_offset(now + dt.timedelta(seconds=xyzt[3]))
+                       + tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
                        for i, s in enumerate(sats)]).transpose()
         # from A-matrix
         A = np.matrix([np.append((xyzt[:3] - XYZs[i]) / rho[i], [c]) for i in xrange(len(sats))])
@@ -143,94 +138,6 @@ def least_squares(obs, navs, init_pos=''):
         # print errors
         # print "try with initial position",xyzt,
         return least_squares(obs, navs, xyzt)
-
-
-def l_sq(obs, navs, init_pos=''):
-    """
-    x = (A^TA)^{-1}A^T l
-    Takes an observation ``obs`` and all the data ``nav`` from navigation file.
-    If we have a-priori information about rover's position,
-        then we can filter low satellites and use troposperic correction
-    :return: rover's position in ecef [m]
-    """
-    c = 299792428  # speed of light
-    now = obs.date
-    # print "Now:", now
-
-    # Find all possible satellites N
-    sats = []
-    for i, r in enumerate(obs.PRN_number):
-        if obs.obs_data['C1'][i] and obs.obs_data['P2'][i] and 'G' in r:
-            nnt = nav_nearest_in_time(now, navs[r])
-            # print r,"nnt:",nnt.date
-            sats += [(r, nnt)]
-    print "sats:", len(sats), sats
-    if len(sats) > 3:
-        # observed [iono-free] pseudoranges
-        # P = np.array([obs.ionofree_pseudorange(s[0]) for s in sats])
-        P = np.array([obs.obs_data['C1'][o.prn(s[0])] for s in sats])
-        # print "P =",P
-        # get XYZ-coords of satellites
-        # XYZs = np.array([nav_nearest_in_time(now,navs[s]).eph2pos(now) for s in sats])
-        XYZs = np.array([s[1].eph2pos(now) for s in sats])
-        # print "XYZs =",XYZs
-    elif len(sats) <= 3 and len(init_pos):  # FIXME: rewise this logic
-        print "\n\tWarning: too few satellites:", len(sats)
-        return None
-    else:
-        print "\n\tWarning: bad measurement!"
-        return None
-    # xyzt = [1e-10,1e-10,1e-10,0.] # initial point
-    xyzt = [2734540., 1595960., 5518310., 0]  # initial point
-
-    for itr in range(10):
-        # print "\n\t\titer =", itr
-        lla = ecef_to_lat_lon_alt(xyzt, deg=False)
-        rho = np.array([np.sqrt(sum([(x - xyzt[i]) ** 2 for i, x in enumerate(XYZs[j])])) for j in xrange(len(sats))])
-        # print "ρ =", rho
-        # form l-vector (sometimes `l` is denoted as `b`)
-        # l = np.matrix([P[i] - rho[i] + c*s[1].time_offset(now+dt.timedelta(seconds=xyzt[3]))
-        #                - tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
-        #                for i, s in enumerate(sats)]).transpose()
-        # TODO: tropomodel
-        # print "offsets:"
-        # for offs in ["%.6f"%s[1].time_offset(now) for s in sats]: print offs
-        l = np.matrix([P[i] - rho[i]
-                       + c * s[1].time_offset(now)
-                       for i, s in enumerate(sats)]).transpose()
-        # print "<l> = ",l.mean()
-        # from A-matrix
-        A = np.matrix([np.append((xyzt[:3] - XYZs[i]) / rho[i], c) for i in xrange(len(sats))])
-        # print "<A> =",A.mean()
-        AT = A.transpose()
-        # form x-vector
-        x_hat_matrix = ((AT * A).I * AT * l)
-        x_hat = x_hat_matrix.flatten().getA()[0]
-        # x_hat[3] /= c
-        # x_hat[3] *= 10    # time in seconds again
-        # print "(x,y,z,cδt) =",", ".join(map(lambda x: "%.5f" %x, x_hat))
-        # print "\nΔX = %.3f, ΔY = %.3f, ΔX = %.3f, ΔT = %e" % tuple(map(float, x_hat))
-        xyzt += x_hat
-        phi, t, h = ecef_to_lat_lon_alt(xyzt, deg=False)
-
-        R = np.matrix([[-sin(phi) * cos(t), -sin(phi) * sin(t), cos(phi)],
-                       [-sin(t), cos(t), 0],
-                       [cos(phi) * cos(t), cos(phi) * sin(t), sin(phi)]])
-        Q = (AT * A).I
-        S_T = R * Q[0:3, 0:3] * R.transpose()
-
-        GDOP = sqrt(sum(S_T.diagonal().getA()[0]) + Q[3, 3])
-        # print "GDOP = %.3f, VDOP = %.3f" % (GDOP,sqrt(S_T[2,2]))
-        # print lla_string(ecef_to_lat_lon_alt(xyzt)),"%.4f"%xyzt[3]
-        delta = np.sqrt(sum(map(lambda k: k ** 2, x_hat[:3])))
-        if delta < 100.:
-            break
-        # now += dt.timedelta(seconds=x_hat[3])
-        XYZs = np.array([s[1].eph2pos(now + dt.timedelta(seconds=x_hat[3])) for s in sats])
-
-    # print "GDOP = %.3f, VDOP = %.3f" % (GDOP,sqrt(S_T[2,2]))
-
-    return xyzt
 
 
 if __name__ == "__main__":

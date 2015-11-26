@@ -9,13 +9,13 @@ from coord.ecef import ecef_to_lat_lon_alt, sat_elev
 
 
 def satellites(pos, sat_pos, sat_names=''):
-    '''
+    """
     Visualize satellites above the rover
     :param pos: rover's position (ecef)
     :param sat_pos: array of satellites positions (each position in ecef)
     :param sat_names: [optional] satellites names
     :return: None
-    '''
+    """
     a = 6378137.0       # Major semi-axis
     b = 6356752.314245  # Minor semi-axis
     elev_mask = np.deg2rad(30)  # elevation mask
@@ -58,12 +58,12 @@ def satellites(pos, sat_pos, sat_names=''):
     ax.plot(*perpendicular,color='y')
 
     def rotate(X,Y,Z,phi,theta):
-        '''
+        """
         Euler's rotations
         :param X:
         :param Y:
         :return:
-        '''
+        """
         alpha = theta
         beta  = pi/2
         gamma = phi

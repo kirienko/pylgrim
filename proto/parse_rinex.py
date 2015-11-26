@@ -2,7 +2,6 @@
 # ! encoding: UTF8
 import re
 from collections import defaultdict
-
 from nav_data import NavGPS, NavGLO, PreciseNav
 from obs_data import ObsGPS
 from datetime import datetime
@@ -11,11 +10,11 @@ __author__ = 'kirienko'
 
 
 def get_header_line(headr, property):
-    '''
+    """
     :param headr: the header of the RINEX-file
     :param property: string-like property to search for (e.g. 'delta-utc')
     :return: the string of the ``headr`` containing ``property``
-    '''
+    """
     pattern = re.compile(property, re.IGNORECASE)
     for d in headr:
         if pattern.search(d):
@@ -98,9 +97,9 @@ def parse_rinex(path):
 
         observations = []
         for j, h in enumerate(body):
-            if 'G' in h or 'R' in h and h[:20] != ' '*20:
+            if 'G' in h or 'R' in h and h[:20] != ' ' * 20:
                 satellite_count = int(h[30:32])
-                if satellite_count > 12:    # sometimes it happens!
+                if satellite_count > 12:  # sometimes it happens!
                     observations += [ObsGPS(body[j:j + satellite_count + 2], obs_types)]
                 else:
                     observations += [ObsGPS(body[j:j + satellite_count + 1], obs_types)]

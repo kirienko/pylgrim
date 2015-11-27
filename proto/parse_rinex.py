@@ -135,13 +135,15 @@ def parse_sp3(path):
 
 
 if __name__ == "__main__":
-    navigations = parse_rinex('../test_data/test.n')
+    # navigations = parse_rinex('../test_data/test.n')
+    navigations = parse_rinex('../test_data/test.g')
     # for k,v in navigations.items(): print k, [str(vv.date)for vv in v]
     # print "\nSatellites:", ', '.join(sorted(navigations.keys()))
-    g = navigations['G05']
-    # g = navigations['R04']
+    # g = navigations['G05']
+    g = navigations['R04']
     z1, z2 = sorted([g[0], g[1]], key=lambda x: x.date)
     t1, t2 = z1.eph[8], z2.eph[8]
+    print g[0].eph2pos(g[0].date)
 
     # delta_t = dt.timedelta(seconds=t2-t1)
     # print "Δt = t1 - t2 = %s" % delta_t
@@ -150,5 +152,5 @@ if __name__ == "__main__":
     # print "R(t2 + Δt/2) = ",R2
     # print "ΔX = %d km, ΔY = %d km, ΔZ = %d km" % tuple(int((r2-r1)) for r1,r2 in zip(R1,R2))
 
-    observations = parse_rinex('../test_data/test.o')
-    precise = parse_sp3('../test_data/igs11484.sp3')
+    # observations = parse_rinex('../test_data/test.o')
+    # precise = parse_sp3('../test_data/igs11484.sp3')

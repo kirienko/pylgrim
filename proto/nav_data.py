@@ -171,16 +171,35 @@ class NavGPS(Nav):
 
 
 class NavGLO(Nav):
-    def eph2pos(self, t):
+
+    def deq(self, x, xdot):
+
+
+    def eph2pos(self, time):
         """
-        ECEF coordinates of the satellite
+        ECEF coordinates of the satellite based on RTKlib
         """
+        RE_GLO = 6378136.0      # radius of earth (m)            ref [2]
+        MU_GLO = 3.9860044E14   # gravitational constant         ref [2]
+        J2_GLO = 1.0826257E-3   # 2nd zonal harmonic of geopot   ref [2]
+        OMGE_GLO = 7.292115E-5  # earth angular velocity (rad/s) ref [2]
+        ERREPH_GLO = 5.0        # error of glonass ephemeris (m)
+        TSTEP =  60.0           # integration step glonass ephemeris (s)
+
         r_0 = np.array([self.eph[0], self.eph[4], self.eph[8]])  # R₀ = (X₀, Y₀, Z₀)
         v_0 = np.array([self.eph[1], self.eph[5], self.eph[9]])  # V₀ = (V_x₀, V_y₀, V_z₀)
         a_0 = np.array([self.eph[2], self.eph[6], self.eph[10]])  # a₀ = (a_x₀, a_y₀, a_z₀)
-        print "test" + "\n".join(map(str, [r_0, v_0, a_0]))
-        t_k = (self.date - t).total_seconds()
-        return r_0 + v_0 * t_k + a_0 * t_k ** 2 / 2
+
+        TauN, GammaN, tk = map(float,self.raw_data[7:10])
+        print TauN, GammaN, tk
+        # beginning of the day:
+        t_0 = datetime(*self.date.timetuple()[:3])
+        t = (t_0 - time).total_seconds() - tk
+
+        glo_xyzt = np.append(r_0, -TauN + GammaN * t)  # coordinates in ECEF and clock bias
+
+
+        return glo_xyzt
 
 
 class PreciseNav():

@@ -5,8 +5,9 @@ import datetime as dt
 import numpy as np
 from datetime import datetime
 from math import sqrt, sin, cos, atan2
-
 # Origin of GPS time
+from numpy.numarray import zeros
+
 ori = dt.datetime(year=1980, month=1, day=6,
                   hour=0, minute=0, second=0, microsecond=0)
 
@@ -171,35 +172,67 @@ class NavGPS(Nav):
 
 
 class NavGLO(Nav):
+    def deq(self, x):
+        RE_GLO = 6378136.0  # radius of earth (m)            ref [2]
+        MU_GLO = 3.9860044E14  # gravitational constant         ref [2]
+        J2_GLO = 1.0826257E-3  # 2nd zonal harmonic of geopot   ref [2]
+        OMGE_GLO = 7.292115E-5  # earth angular velocity (rad/s) ref [2]
+        ERREPH_GLO = 5.0  # error of glonass ephemeris (m)
 
-    def deq(self, x, xdot):
+        r2 = np.dot(x[:3], x[:3])
+        r3 = r2 * sqrt(r2)
+        omg2 = sqrt(OMGE_GLO)
 
+        if r2 <= 0:
+            return zeros(6)
+
+        a = 1.5 * J2_GLO * MU_GLO * sqrt(RE_GLO) / r2 / r3  # /* 3/2*J2*mu*Ae^2/r^5 */
+        b = 5.0 * x[2] * x[2] / r2  # /* 5*z^2/r^2 */
+        c = -MU_GLO / r3 - a * (1.0 - b)  # /* -mu/r^3-a(1-b) */
+        # xdot = np.array()
+        xdot0_2 = x[3:6]
+        xdot_3 = (c + omg2) * x[0] + 2.0 * OMGE_GLO * x[4] + self.eph[2]  # + acc[0];
+        xdot_4 = (c + omg2) * x[1] - 2.0 * OMGE_GLO * x[3] + self.eph[6]  # + acc[1];
+        xdot_5 = (c - 2.0 * a) * x[2] + self.eph[10]  # + acc[2];
+        return np.append(xdot0_2, np.array([xdot_3, xdot_4, xdot_5]))
 
     def eph2pos(self, time):
         """
         ECEF coordinates of the satellite based on RTKlib
         """
-        RE_GLO = 6378136.0      # radius of earth (m)            ref [2]
-        MU_GLO = 3.9860044E14   # gravitational constant         ref [2]
-        J2_GLO = 1.0826257E-3   # 2nd zonal harmonic of geopot   ref [2]
-        OMGE_GLO = 7.292115E-5  # earth angular velocity (rad/s) ref [2]
-        ERREPH_GLO = 5.0        # error of glonass ephemeris (m)
-        TSTEP =  60.0           # integration step glonass ephemeris (s)
+        TSTEP = 60.0  # integration step glonass ephemeris (s)
 
         r_0 = np.array([self.eph[0], self.eph[4], self.eph[8]])  # R₀ = (X₀, Y₀, Z₀)
         v_0 = np.array([self.eph[1], self.eph[5], self.eph[9]])  # V₀ = (V_x₀, V_y₀, V_z₀)
         a_0 = np.array([self.eph[2], self.eph[6], self.eph[10]])  # a₀ = (a_x₀, a_y₀, a_z₀)
 
-        TauN, GammaN, tk = map(float,self.raw_data[7:10])
+        TauN, GammaN, tk = map(float, self.raw_data[7:10])
         print TauN, GammaN, tk
         # beginning of the day:
         t_0 = datetime(*self.date.timetuple()[:3])
-        t = (t_0 - time).total_seconds() - tk
+        # t = (t_0 - time).total_seconds() - tk
+        t = (time-t_0).total_seconds() - tk
 
-        glo_xyzt = np.append(r_0, -TauN + GammaN * t)  # coordinates in ECEF and clock bias
+        # glo_xyzt = np.append(r_0, -TauN + GammaN * t)  # coordinates in ECEF and clock bias
 
-
-        return glo_xyzt
+        x = np.append(r_0, v_0)
+        # print "x =", x
+        tt = np.sign(t) * TSTEP
+        while abs(t) > 1E-9:
+            if abs(t) < TSTEP:
+                tt = t
+            # globit(tt, x)
+            k1 = self.deq(x)
+            w = x + k1 * t / 2.
+            k2 = self.deq(w)
+            w = x + k2 * t / 2.
+            k3 = self.deq(w)
+            w = x + k3 * t
+            k4 = self.deq(w)
+            x += (k1 + 2 * k2 + 2 * k3 + k4) * t / 6
+            t -= tt
+        # print "res =", x[:3]
+        return np.append(x[:3], -TauN + GammaN * t)  # coordinates in ECEF and clock bias
 
 
 class PreciseNav():

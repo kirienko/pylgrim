@@ -68,7 +68,7 @@ def least_squares(obs, navs, init_pos=''):
     sats = []
     # sats = {}
     for i, r in enumerate(obs.PRN_number):
-        if obs.obs_data['C1'][i] and obs.obs_data['P2'][i] and 'G' in r:
+        if obs.obs_data['C1'][i] and obs.obs_data['P2'][i] and 'R' in r:
             nnt = nav_nearest_in_time(now, navs[r])
             if len(init_pos):
                 sat_coord = nnt.eph2pos(now)
@@ -106,7 +106,7 @@ def least_squares(obs, navs, init_pos=''):
         # print "ρ =", rho
         # form l-vector (sometimes `l` is denoted as `b`)
         l = np.matrix([P[i] - rho[i] + c * s[1].time_offset(now + dt.timedelta(seconds=xyzt[3]))
-                       + tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
+                       # + tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
                        for i, s in enumerate(sats)]).transpose()
         # from A-matrix
         A = np.matrix([np.append((xyzt[:3] - XYZs[i]) / rho[i], [c]) for i in xrange(len(sats))])
@@ -145,8 +145,9 @@ def least_squares(obs, navs, init_pos=''):
 if __name__ == "__main__":
 
     nav_file = '../test_data/test.n'
-    # obs_file = '../test_data/test.o'
-    obs_file = '../test_data/test.o.full'
+    glo_file = '../test_data/test.g'
+    obs_file = '../test_data/test.o'
+    # obs_file = '../test_data/test.o.full'
 
     # Process Nav file:
     # ``navigations`` is a dict with
@@ -155,12 +156,24 @@ if __name__ == "__main__":
     #   Note: One satellite may have several nav objects (for several times,
     #       e.g. data on 14:00 and on 16:00)
     navigations = parse_rinex(nav_file)
+    navigations = parse_rinex(glo_file)
 
     # Process Obs file
     observations = parse_rinex(obs_file)
     o = observations[240]
 
-    # satellites(user_pos,sat_positions,sat_names)
+    sat_positions, sat_names = [], []
+    user_pos = least_squares(o, navigations)
+    for s in navigations:
+        n = navigations[s][0]
+        xyz = n.eph2pos(n.date)
+        sat_positions += [xyz]
+        sat_names += [s]
+        # print "User position:",ecef_to_lat_lon_alt(user_pos)
+        print("Satellite's %s zenith angle: %.1f" %
+              (s, sat_elev(user_pos, xyz)))
+    satellites(user_pos, sat_positions, sat_names)
+
     user_pos = []
     # for num_o in range(190,270,10):
     for num_o in range(190, len(observations), 100):

@@ -4,7 +4,7 @@ import re
 from collections import defaultdict
 from nav_data import NavGPS, NavGLO, PreciseNav
 from obs_data import ObsGPS
-from datetime import datetime
+from datetime import datetime, timedelta
 
 __author__ = 'kirienko'
 
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     g = navigations['R04']
     z1, z2 = sorted([g[0], g[1]], key=lambda x: x.date)
     t1, t2 = z1.eph[8], z2.eph[8]
-    print g[0].eph2pos(g[0].date)
+    print g[0].eph2pos(g[0].date + timedelta(minutes=5))
 
     # delta_t = dt.timedelta(seconds=t2-t1)
     # print "Δt = t1 - t2 = %s" % delta_t

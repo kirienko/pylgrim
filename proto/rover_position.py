@@ -37,8 +37,8 @@ def nav_nearest_in_time(t, nav_array):
     :param nav_array:
     :return:
     """
-    # diff_array = [abs((n.date - n.utc2gps(t)).total_seconds()) for n in nav_array]
-    diff_array = [abs((n.date - t).total_seconds()) for n in nav_array]
+    # diff_array = [abs((n.date - t).total_seconds()) for n in nav_array]
+    diff_array = [abs((n.t_oe - t).total_seconds()) for n in nav_array]
     return nav_array[diff_array.index(min(diff_array))]
 
 
@@ -81,7 +81,8 @@ def least_squares(obs, navs, init_pos=''):
     # Form matrix if N >= 4:
     if len(sats) > 3:
         # observed [iono-free] pseudoranges
-        P = np.array([obs.ionofree_pseudorange(s[0]) for s in sats])
+        # P = np.array([obs.ionofree_pseudorange(s[0]) for s in sats])
+        P = np.array([obs.obs_data['C1'][obs.prn(s[0])] for s in sats])
         # get XYZ-coords of satellites
         XYZs = np.array([s[1].eph2pos(now) for s in sats])
         # print "XYZs =",XYZs
@@ -106,7 +107,7 @@ def least_squares(obs, navs, init_pos=''):
         # print "ρ =", rho
         # form l-vector (sometimes `l` is denoted as `b`)
         l = np.matrix([P[i] - rho[i] + c * s[1].time_offset(now + dt.timedelta(seconds=xyzt[3]))
-                       # + tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
+                       - tropmodel(lla, sat_elev(xyzt[:3], XYZs[i], deg=False))
                        for i, s in enumerate(sats)]).transpose()
         # from A-matrix
         A = np.matrix([np.append((xyzt[:3] - XYZs[i]) / rho[i], [c]) for i in xrange(len(sats))])
@@ -155,13 +156,13 @@ if __name__ == "__main__":
     #       values: Nav observation objects
     #   Note: One satellite may have several nav objects (for several times,
     #       e.g. data on 14:00 and on 16:00)
-    navigations = parse_rinex(nav_file)
+    # navigations = parse_rinex(nav_file)
     navigations = parse_rinex(glo_file)
 
     # Process Obs file
     observations = parse_rinex(obs_file)
     o = observations[240]
-
+    """
     sat_positions, sat_names = [], []
     user_pos = least_squares(o, navigations)
     for s in navigations:
@@ -171,18 +172,17 @@ if __name__ == "__main__":
         sat_names += [s]
         # print "User position:",ecef_to_lat_lon_alt(user_pos)
         print("Satellite's %s zenith angle: %.1f" %
-              (s, sat_elev(user_pos, xyz)))
+              (s, sat_elev(user_pos, xyz))), " %d km" % (distance(xyz,[0.,0.,0.])/1000 -6378)
     satellites(user_pos, sat_positions, sat_names)
-
+    """
     user_pos = []
-    # for num_o in range(190,270,10):
-    for num_o in range(190, len(observations), 100):
+    for num_o in range(300, 400, 10):
+    # for num_o in range(190, len(observations), 100):
         # print num_o,
         user_pos += [least_squares(observations[num_o], navigations)]
-        # user_pos += [l_sq(observations[num_o], navigations)]
     user_pos = [up[:3] for up in user_pos if up is not None]
-    # print map(int,map(distance,user_pos[1:],user_pos[:-1]))
-    # print "User's position:\n",'\n'.join(map(lambda x: lla_string(ecef_to_lat_lon_alt(x)),user_pos))
+    print map(int,map(distance,user_pos[1:],user_pos[:-1]))
+    print "User's position:\n",'\n'.join(map(lambda x: lla_string(ecef_to_lat_lon_alt(x)),user_pos))
     home = [2734549.4888, 1595964.1159, 5518311.2380]  # real (approximate) position
     print "Distance to the real point: %.6f km" % (distance(home, user_pos[-1]) / 1000.)
-    # on_map(map(ecef_to_lat_lon_alt, user_pos), scale=1e2)
+    # on_map(map(ecef_to_lat_lon_alt, user_pos), scale=1e5)

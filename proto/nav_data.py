@@ -3,7 +3,7 @@
 
 import datetime as dt
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import sqrt, sin, cos, atan2
 # Origin of GPS time
 from numpy.numarray import zeros
@@ -55,6 +55,8 @@ class Nav():
             self.eph = map(float, self.raw_data[10:27])  # broadcast ephemeris
             self.week = int(float(self.raw_data[28]))  # GPS week
             self.epoch = ori + dt.timedelta(days=self.week * 7)
+            self.t_oe = self.epoch + \
+                        timedelta(seconds=int(self.eph[8])) # time of ephemeris (NB! accuracy: seconds)
         except IndexError:
             pass
 
@@ -179,6 +181,7 @@ class NavGLO(Nav):
         self.r = np.array([self.eph[0], self.eph[4], self.eph[8]]) * 1e3  # R₀ = (X₀, Y₀, Z₀)
         self.v = np.array([self.eph[1], self.eph[5], self.eph[9]]) * 1e3  # V₀ = (V_x₀, V_y₀, V_z₀)
         self.acc = np.array([self.eph[2], self.eph[6], self.eph[10]]) * 1e3  # a₀ = (a_x₀, a_y₀, a_z₀)
+        self.t_oe = self.t_0 + timedelta(seconds=int(self.tk))
 
     def deq(self, x):
         RE_GLO = 6378136.0  # radius of earth [m]               ref [2]
@@ -189,12 +192,12 @@ class NavGLO(Nav):
 
         r2 = np.dot(x[:3], x[:3])
         r3 = r2 * sqrt(r2)
-        omg2 = sqrt(OMGE_GLO)
+        omg2 = OMGE_GLO * OMGE_GLO
 
         if r2 <= 0:
             return zeros(6)
 
-        deq_a = 1.5 * J2_GLO * MU_GLO * sqrt(RE_GLO) / r2 / r3  # /* 3/2*J2*mu*Ae^2/r^5 */
+        deq_a = 1.5 * J2_GLO * MU_GLO * RE_GLO**2 / r2 / r3  # /* 3/2*J2*mu*Ae^2/r^5 */
         deq_b = 5.0 * x[2] * x[2] / r2  # /* 5*z^2/r^2 */
         deq_c = -MU_GLO / r3 - deq_a * (1.0 - deq_b)  # /* -mu/r^3-a(1-b) */
         # xdot = np.array()
@@ -220,7 +223,8 @@ class NavGLO(Nav):
         x = np.append(self.r, self.v)
         # print "x =", x
         tt = np.sign(t) * TSTEP
-        i =0
+        i = 0
+        # print "time = ", t, "\tt_0 =", self.t_0, "\tt_k =", self.tk, "\tdate =", self.date
         while abs(t) > 1E-9:
             if abs(t) < TSTEP:
                 tt = t
@@ -235,14 +239,14 @@ class NavGLO(Nav):
             x += (k1 + 2*k2 + 2*k3 + k4) * tt/6
             t -= tt
             i += 1
+            # print "i = %d, t = %f" % (i, t)
         # print "res =", x[:3]
-        print "i=", i
         # return np.append(x[:3], -self.TauN + self.GammaN * t)  # coordinates in ECEF and clock bias
         return x[:3]        # coordinates in ECEF and clock bias
 
     def time_offset(self, time):
         t = (time-self.t_0).total_seconds() - self.tk
-        return -self.TauN + self.GammaN * t
+        return -(-self.TauN + self.GammaN * t)
 
 
 class PreciseNav():

@@ -1,5 +1,6 @@
-GNSS + INS + Kalman filter = Precise navigation
+GNSS software receiver written in python
 ===============================================
+Playground project. Just to understand how GNSS works.
 
 Project Contents:
 -----------------

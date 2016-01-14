@@ -1,4 +1,5 @@
 from numpy import array, sqrt
+from random import choice
 from unittest import TestCase
 from numpy.testing import assert_allclose
 from proto.nav_data import *
@@ -40,9 +41,14 @@ class TestNavGPS(TestCase):
 
 class TestNavGLO(TestCase):
     def setUp(self):
-        nav_file = '../../test_data/test.g'
+        # nav_file = '../../test_data/test.g'
+        nav_file = '../../test_data/log_000.15g'
         navigations = parse_rinex(nav_file)
-        self.navs = navigations['R19']
+        sats = [k for k, v in navigations.items() if len(v) > 1]   # list of possible satellites
+        sat = choice(sats)  # choose one satellite randomly
+        print "PRN:",sat
+        self.navs = navigations[sat]
+        # self.navs = navigations['R19']
         # for j, n in enumerate(self.navs):
         #     print j, n.date
         # print self.navs[1].date - self.navs[0].date
@@ -51,17 +57,18 @@ class TestNavGLO(TestCase):
     def middle(x):
         """
         :param x: array of length N
-        :return: array of length N-1 of the middles between elemes of x
+        :return: array of length N-1 of the middles between elements of x
         """
-        return map(lambda x: x[0].date +
-                             timedelta(seconds=float((x[1].date - x[0].date).total_seconds()) / 4),
+        return map(lambda z: z[0].date +
+                             timedelta(seconds=float((z[1].date - z[0].date).total_seconds()) / 2),
                    zip(x[:-1], x[1:]))
 
     def test_eph2pos(self):
         dt = self.middle(self.navs)
-        # print "dt =", dt
-        d1 = self.navs[2].eph2pos(dt[1])
-        d2 = self.navs[1].eph2pos(dt[1])
-        # print "d1 =", d1
-        # print "d2 =", d2
-        assert_allclose(d1, d2, rtol=1e-6)
+        print "dt =", dt
+        num = 0
+        d1 = self.navs[num].eph2pos(dt[num])
+        d2 = self.navs[num+1].eph2pos(dt[num])
+        print "at", dt[num], " d1 =", d1, self.navs[num].date
+        print "at", dt[num], " d2 =", d2, self.navs[num+1].date
+        assert_allclose(d1, d2, rtol=1e-6) # FIXME: usually it fails

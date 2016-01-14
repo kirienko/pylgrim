@@ -220,11 +220,11 @@ class NavGLO(Nav):
 
         # glo_xyzt = np.append(r_0, -TauN + GammaN * t)  # coordinates in ECEF and clock bias
 
-        x = np.append(self.r, self.v)
+        x = np.append(self.r, self.v)   # x = (\vec{r},\vec{v})
         # print "x =", x
         tt = np.sign(t) * TSTEP
         i = 0
-        # print "time = ", t, "\tt_0 =", self.t_0, "\tt_k =", self.tk, "\tdate =", self.date
+        # print "time = ", t, "\tt_0 =", self.t_0, "\tt_k =", self.tk, "\tdate =", self.date, "\ttt =", tt
         while abs(t) > 1E-9:
             if abs(t) < TSTEP:
                 tt = t
@@ -239,7 +239,7 @@ class NavGLO(Nav):
             x += (k1 + 2*k2 + 2*k3 + k4) * tt/6
             t -= tt
             i += 1
-            # print "i = %d, t = %f" % (i, t)
+            # print "i = %d, t = %f," % (i, t), "\tx =",x[:3]
         # print "res =", x[:3]
         # return np.append(x[:3], -self.TauN + self.GammaN * t)  # coordinates in ECEF and clock bias
         return x[:3]        # coordinates in ECEF and clock bias

@@ -183,33 +183,39 @@ class NavGLO(Nav):
         self.acc = np.array([self.eph[2], self.eph[6], self.eph[10]]) * 1e3  # a₀ = (a_x₀, a_y₀, a_z₀)
         self.t_oe = self.t_0 + timedelta(seconds=int(self.tk))
 
+        self.RE_GLO = 6378136.0  # radius of earth [m]               ref [2]
+        self.MU_GLO = 3.986004418e14  # gravitational constant [m³/s²]         ref [2]
+        self.J2_GLO = 1.08262575e-3  # 2nd zonal harmonic of geopot   ref [2]
+        self.OMGE_GLO = 7.292115e-5  # earth angular velocity [rad/s] ref [2]
+        self.ERREPH_GLO = 5.0  # error of glonass ephemeris [m]
+
     def deq(self, x):
-        RE_GLO = 6378136.0  # radius of earth [m]               ref [2]
-        MU_GLO = 3.986004418e14  # gravitational constant [m³/s²]         ref [2]
-        J2_GLO = 1.08262575e-3  # 2nd zonal harmonic of geopot   ref [2]
-        OMGE_GLO = 7.292115e-5  # earth angular velocity [rad/s] ref [2]
-        ERREPH_GLO = 5.0  # error of glonass ephemeris [m]
+        """
+        Differential equation solution
+        :param x: array of length 6 that contains coordinates and velocities
+        :return:
+        """
 
         r2 = np.dot(x[:3], x[:3])
         r3 = r2 * sqrt(r2)
-        omg2 = OMGE_GLO * OMGE_GLO
+        omg2 = self.OMGE_GLO * self.OMGE_GLO
 
         if r2 <= 0:
             return zeros(6)
 
-        deq_a = 1.5 * J2_GLO * MU_GLO * RE_GLO**2 / r2 / r3  # /* 3/2*J2*mu*Ae^2/r^5 */
+        deq_a = 1.5 * self.J2_GLO * self.MU_GLO * self.RE_GLO**2 / r2 / r3  # /* 3/2*J2*mu*Ae^2/r^5 */
         deq_b = 5.0 * x[2] * x[2] / r2  # /* 5*z^2/r^2 */
-        deq_c = -MU_GLO / r3 - deq_a * (1.0 - deq_b)  # /* -mu/r^3-a(1-b) */
+        deq_c = -self.MU_GLO / r3 - deq_a * (1.0 - deq_b)  # /* -mu/r^3-a(1-b) */
         # xdot = np.array()
         xdot0_2 = x[3:6]
-        xdot_3 = (deq_c + omg2) * x[0] + 2.0 * OMGE_GLO * x[4] + self.acc[0]
-        xdot_4 = (deq_c + omg2) * x[1] - 2.0 * OMGE_GLO * x[3] + self.acc[1]
+        xdot_3 = (deq_c + omg2) * x[0] + 2.0 * self.OMGE_GLO * x[4] + self.acc[0]
+        xdot_4 = (deq_c + omg2) * x[1] - 2.0 * self.OMGE_GLO * x[3] + self.acc[1]
         xdot_5 = (deq_c - 2.0 * deq_a) * x[2] + self.acc[2]
         return np.append(xdot0_2, np.array([xdot_3, xdot_4, xdot_5]))
 
     def eph2pos(self, time):
         """
-        ECEF coordinates of the satellite based on RTKlib
+        ECEF coordinates of the satellite (based algorithm described in RTKlib manual)
         """
         TSTEP = 60.0  # integration step glonass ephemeris (s)
 

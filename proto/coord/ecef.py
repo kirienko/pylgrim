@@ -1,6 +1,6 @@
 #! encoding: UTF8
 import numpy as np
-import gpstk as G
+# import gpstk as G
 from numpy.linalg import norm
 from numpy.matrixlib import matrix
 from numpy.core.umath import sqrt, cos, sin, arcsin, isnan, degrees

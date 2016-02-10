@@ -5,7 +5,7 @@ from numpy import sin,cos, tan, pi, ones, zeros
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from coord.ecef import ecef_to_lat_lon_alt, sat_elev
+from proto.coord.ecef import ecef_to_lat_lon_alt, sat_elev
 
 
 def satellites(pos, sat_pos, sat_names=''):
@@ -42,14 +42,15 @@ def satellites(pos, sat_pos, sat_names=''):
     for idx, sat in enumerate(sat_pos):
         if sat_elev(pos,sat,deg=False) > elev_mask:
             ax.scatter3D(*sat,color='k',s=10) # <-- satellites
+            if sat_names:
+                ax.text(xx[idx],yy[idx],zz[idx],sat_names[idx], color='purple')
         else:
             ax.scatter3D(*sat, alpha=0.5,
                          color='gray',s=10) # <-- satellites
+            if sat_names:
+                ax.text(xx[idx],yy[idx],zz[idx],sat_names[idx], color='lightgray')
             # print "Bad satellite:",sat, sat_elev(pos,sat)
 
-    if sat_names:
-        for i in range(len(sat_names)):
-            ax.text(xx[i],yy[i],zz[i],sat_names[i])
     if not isinstance(pos,list):
         pos = list(pos)
     ax.scatter3D(*pos[:3],color='r',s=10)
@@ -65,7 +66,7 @@ def satellites(pos, sat_pos, sat_names=''):
         :return:
         """
         alpha = theta
-        beta  = pi/2
+        beta  = phi
         gamma = phi
         D = np.matrix([[cos(alpha),-sin(alpha), 0],
                        [sin(alpha), cos(alpha), 0],
@@ -80,7 +81,8 @@ def satellites(pos, sat_pos, sat_names=''):
         X1, Y1, Z1 = [],[],[]
         for i in xrange(num):
             vec = np.array([X[i],Y[i],Z[i]])
-            XYZ = B * C * D * vec
+            # XYZ = B * C * D * vec
+            XYZ = C * D * vec
             X1.extend(XYZ[0].tolist())
             Y1.extend(XYZ[1].tolist())
             Z1.extend(XYZ[2].tolist())

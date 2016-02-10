@@ -1,6 +1,7 @@
 #! encoding: UTF8
 import numpy as np
 # import gpstk as G
+from math import atan2
 from numpy.linalg import norm
 from numpy.matrixlib import matrix
 from numpy.core.umath import sqrt, cos, sin, arcsin, isnan, degrees
@@ -164,3 +165,19 @@ def sat_elev(R_u, R_sat, deg=True):
         return degrees(elev)
     else:
         return elev
+
+
+def sat_az(R_u, R_sat, deg=True):
+    """
+    Azimuth of some certain sat. relative to the user's position
+    :param R_u:   (X,Y,Z) -- user's coordinates in ECEF (numpy array)
+    :param R_sat: (X,Y,Z) -- satellite's coordinates in ECEF (numpy array)
+    :param deg: whether to return angle in degrees
+    :return: azimuth of the satellite
+    """
+    enu = sat_in_enu(R_u, R_sat)
+    az = atan2(enu[0], enu[1])
+    if deg:
+        return degrees(az)
+    else:
+        return az

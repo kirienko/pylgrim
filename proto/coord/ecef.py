@@ -32,6 +32,7 @@ def ecef_to_lat_lon_alt1(R, deg=True):
     Fukushima implementation of the Bowring algorithm (2006),
     see [4] --
     :param R: (X,Y,Z) -- coordinates in ECEF (numpy array)
+    :param deg: if True then lat and lon are returned in degrees (rad otherwise)
     :return:  (φ,θ,h) -- lat [deg], lon [deg], alt in WGS84 (numpy array)
     """
     # WGS 84 constants
@@ -57,7 +58,6 @@ def ecef_to_lat_lon_alt1(R, deg=True):
         if abs(delta) < 1e-10 or i == max_iter - 1:
             break
         S, C = Sn, Cn
-    # print "i =",i
     theta = np.math.atan2(R[1], R[0])
     Cc = e1 * Cn
     phi = np.sign(R[2]) * np.math.atan2(Sn, Cc)
@@ -76,6 +76,7 @@ def ecef_to_lat_lon_alt(R, deg=True):
     Fukushima implementation of the Bowring algorithm,
     see [3] -- equations (C7) - (C12)
     :param R: (X,Y,Z) -- coordinates in ECEF (numpy array)
+    :param deg: if True then lat and lon are returned in degrees (rad otherwise)
     :return:  (φ,θ,h) -- lat [deg], lon [deg], alt in WGS84 (numpy array)
     """
     # WGS 84 constants
@@ -112,6 +113,47 @@ def ecef_to_lat_lon_alt(R, deg=True):
     return out
 
 
+def ecef_to_spherical(R, deg=True):
+    """
+    Fukushima implementation of the Bowring algorithm,
+    see [3] -- equations (C7) - (C12)
+    :param R: (X,Y,Z) -- coordinates in ECEF (numpy array)
+    :param deg: if True then lat and lon are returned in degrees (rad otherwise)
+    :return:  (φ,θ,h) -- lat [deg], lon [deg], alt in WGS84 (numpy array)
+    """
+    # WGS 84 constants
+    a = 6366255.89  # Equatorial Radius [m]
+    b = 6366255.89  # Polar Radius [m]
+    e = 0.0  # e = sqrt(1-b²/a²)
+    # e1 = sqrt(1 - e ** 2)  # e' = sqrt(1 - e²)
+    e1 = 1.
+    # c = a * e ** 2  # (6)
+    c = 0.
+    if isinstance(R, list):
+        R = np.array(R)
+    p = sqrt(R[0] ** 2 + R[1] ** 2)  # (1) - sqrt(X² + Y²)
+    T = R[2] / (e1 * p) or 1.  # (C8) - zero approximation
+    for i in range(10):
+        C = np.power(1 + T ** 2, -0.5)  # (C9)
+        S = C * T  # (C9)
+        T_new = (e1 * R[2] + c * S ** 3) / (p - c * C ** 3)  # (C7)
+        delta = T_new - T
+        T = T_new
+        if abs(delta) / T < 1e-9:
+            break
+    theta = np.math.atan2(R[1], R[0])
+    phi = np.math.atan2(T, e1)  # (C10)
+    T1 = 1 + T ** 2
+    if p > R[2]:  # (C11)
+        h = sqrt(T1 - e ** 2) / e1 * (p - a / sqrt(T1))
+    else:  # (C12)
+        h = sqrt(T1 - e ** 2) * (R[2] / T - b / sqrt(T1))
+    if deg:
+        out = np.array([np.degrees(phi), np.degrees(theta), h])
+    else:
+        out = np.array([phi, theta, h])
+    return out
+
 def ecef_to_geodetic(R):
     """
     ECEF to Geodetic using gpstk. Degrees only
@@ -132,8 +174,10 @@ def sat_in_enu(R_u, R_sat):
     See [1] p. 522
     """
     if isinstance(R_sat, list):  R_sat = np.array(R_sat)
+    R = R_sat - R_u
     # phi, theta, h = ecef_to_lat_lon_alt(R_u, deg=False)
     phi_theta_h = ecef_to_lat_lon_alt(R_u, deg=False)
+    # phi_theta_h = ecef_to_spherical(R_u, deg=False)
     # coordinate transformation matrix from ECEF to ENU:
     sin_p, sin_t = map(sin, phi_theta_h[:2])
     cos_p, cos_t = map(cos, phi_theta_h[:2])
@@ -142,12 +186,13 @@ def sat_in_enu(R_u, R_sat):
                             [-sin_p * cos_t, -sin_p * sin_t, cos_p],
                             [cos_p * cos_t, cos_p * sin_t, sin_p]])
     # coordinate origin shift vector from ECEF to local ENU:
-    S_enu = matrix([[R_u[0] * sin_t - R_u[1] * cos_t],
-                    [R_u[0] * sin_p * cos_t - R_u[1] * sin_p * sin_t - R_u[2] * cos_p],
-                    [-R_u[0] * cos_p * cos_t - R_u[1] * cos_p * sin_t - R_u[2] * sin_t]])
+    # S_enu = matrix([[R_u[0] * sin_t - R_u[1] * cos_t],
+    #                 [R_u[0] * sin_p * cos_t - R_u[1] * sin_p * sin_t - R_u[2] * cos_p],
+    #                 [-R_u[0] * cos_p * cos_t - R_u[1] * cos_p * sin_t - R_u[2] * sin_t]])
 
-    X_enu = C_ecef_to_enu * R_sat.reshape((3, 1)) + S_enu
-    # return normalized vector
+    # X_enu = C_ecef_to_enu * R_sat.reshape((3, 1))# + S_enu
+    X_enu = C_ecef_to_enu * R.reshape((3, 1))# + S_enu
+    # return normalized vector:
     return (X_enu / norm(X_enu)).flatten().getA()[0]
 
 

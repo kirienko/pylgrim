@@ -21,5 +21,5 @@ class TestVmf(TestCase):
         self.assertEquals(self.cfs, (0.00121328, 0.00043331))
 
     def test_vmf(self):
-        ori = vmf(pos=self.boehm_pos_rad, time=self.boehm_time, coeffs=self.cfs, zd=deg2rad(85))
+        ori = vmf(pos=self.boehm_pos_rad, time=self.boehm_time, coeffs=self.cfs, elev=deg2rad(5))
         assert_allclose(ori, self.boehm_coeffs, rtol=1e-5, err_msg="Wrong tropodelays")

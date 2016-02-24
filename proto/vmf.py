@@ -152,7 +152,15 @@ def cont_fraction(el, a, b, c):
     return topcon / (sine + gamma)
 
 
-def vmf(pos, time, zd, coeffs):
+def vmf(pos, time, elev, coeffs):
+    """
+    Vienna mapping function (aka VMF1_HT)
+    :param pos: receiver position in (lat, lon, alt) [rad, rad, m]
+    :param time: time of observation, datetime object
+    :param elev: elevation angle [rad]
+    :param coeffs: hydrostatic (ah) and wet (aw) coefficients, e.g.: (0.00121328, 0.00043331)
+    :return: tropospheric delay in meters
+    """
     ah, aw = coeffs
     ep = datetime(2000, 1, 1, 12, 0, 0)
     mjd = 51544.5 + (time - ep).total_seconds() / 86400.0
@@ -173,7 +181,6 @@ def vmf(pos, time, zd, coeffs):
 
     ch = c0h + ((cos(doy / 365.25 * 6.283185307179586476925287 + psi) + 1.) *
                 c11h / 2. + c10h) * (1. - cos(pos[0]))
-    elev = 1.5707963267948966 - zd
     vmf1h = cont_fraction(elev, ah, bh, ch)
     # Compute the height correction
     #   (Niell, A. E. "Global mapping functions for the atmosphere delay at radio wavelengths."

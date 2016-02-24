@@ -255,9 +255,10 @@ class NavGLO(Nav):
         return -(-self.TauN + self.GammaN * t)
 
 
-class PreciseNav():
+class PreciseNav:
     def __init__(self, date, sat_position):
         self.date = date
+        self.t_oe = self.date
         self.xyzt = np.array(map(float, sat_position))
 
     def eph2pos(self, time=0):

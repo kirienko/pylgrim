@@ -1,14 +1,14 @@
 #!/usr/bin/python
-#! encoding: UTF8
+# ! encoding: UTF8
 from math import cos, exp, pi, radians
+from datetime import datetime
 
 __author__ = 'kirienko'
 
 
 ## based on RTKlib
 
-# def tropmodel(time, pos, azel, humi=0.75):
-def tropmodel(pos, el, humi=0.75, temp0 = 15.0):
+def saast(pos, el, humi=0.75, temp0=15.0):
     """
     Function from RTKlib: https://github.com/tomojitakasu/RTKLIB/blob/master/src/rtkcmn.c#L3362-3362
         with no changes
@@ -40,11 +40,24 @@ def tropmodel(pos, el, humi=0.75, temp0 = 15.0):
     trpw = 0.002277 * (1255.0 / temp + 0.05) * e / cos(z)
     return trph + trpw
 
+
+def tropmodel(pos, el, time='', coeffs=(), humi=0.75, temp0=15.0):
+    if len(coeffs) > 1:
+        return vmf(pos, time, el, coeffs)
+    else:
+        return saast(pos, el, humi, temp0)
+
 if __name__ == "__main__":
-    pos = [pi/3,pi/6,100.]
-    azel= pi/2
+    pos = [pi / 3, pi / 6, 100.]
+    azel = 45 * pi / 180
+    t = datetime(2016, 1, 1, 0, 0)
+    from vmf import vmf
+
+    vmf_coeffs = (0.00121328, 0.00043331)
     for h in range(10):
-        print "Relative humidity: %2d %% \t delay: %.3f meters" %(h*10,tropmodel(pos,azel,0.1*h))
-    print(radians(90)),radians(180)
-    for h in range(90,0,-10):
-        print "angle: %2d %% \t delay: %.3f meters" %(h,tropmodel(pos,radians(h),50))
+        saa_ = tropmodel(pos, azel, 0.1 * h)
+        print "Relative humidity: %2d %% \t delay: %.3f meters" % (h * 10, saa_)
+    for h in range(90, 0, -10):
+        saa_ = tropmodel(pos, radians(h), 50)
+        vmf_ = sum(vmf(pos, t, radians(h),  vmf_coeffs))
+        print "Elevation angle: %2d° \t Delays [m]: Saastamoinen: %.3f, VMF1: %.3f" % (h, saa_, vmf_)

@@ -126,8 +126,8 @@ def parse_sp3(path):
             s = int(split[-1].split('.')[0])
             mcs = int(split[-1].split('.')[1][:6])  # <-- probably it's zero anyway
             date = datetime(y, m, d, H, M, s, mcs)
-        elif d[0] == 'P' and date:
-            prn, x, y, z, t = d.split()[1:]
+        elif d[0:2] == 'PG' and date:   # GPS satellites
+            prn, x, y, z, t = d[2:].split()[:5]
             nav_dict['G' + "%02d" % int(prn)] += [PreciseNav(date, (x, y, z, t))]
         else:
             continue

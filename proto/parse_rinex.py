@@ -5,6 +5,7 @@ from collections import defaultdict
 from nav_data import NavGPS, NavGLO, PreciseNav
 from obs_data import ObsGPS
 from datetime import datetime, timedelta
+from gtime import GTime
 
 __author__ = 'kirienko'
 
@@ -123,9 +124,8 @@ def parse_sp3(path):
         if d[0] == '*':
             split = d.split()[1:]
             y, m, d, H, M = map(int, split[:-1])
-            s = int(split[-1].split('.')[0])
-            mcs = int(split[-1].split('.')[1][:6])  # <-- probably it's zero anyway
-            date = datetime(y, m, d, H, M, s, mcs)
+            s = float(split[-1])
+            date = GTime(y, m, d, H, M, s)
         elif d[0:2] == 'PG' and date:   # GPS satellites
             prn, x, y, z, t = d[2:].split()[:5]
             nav_dict['G' + "%02d" % int(prn)] += [PreciseNav(date, (x, y, z, t))]

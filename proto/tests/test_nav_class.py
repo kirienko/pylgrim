@@ -5,7 +5,7 @@ from numpy.testing import assert_allclose
 from proto.nav_data import *
 from proto.nav_data import def_leap
 from proto.parse_rinex import parse_rinex
-from datetime import timedelta, datetime
+from datetime import datetime
 
 
 def distance(R1, R2):
@@ -27,9 +27,7 @@ class TestNavGPS(TestCase):
         nav_file = '../../test_data/epgga2.010'
         navigations = parse_rinex(nav_file)
 
-        # self.t = timedelta(seconds=346500)
         self.t = 346500     # seconds from epoch
-
         self.n = navigations['G31'][0]
         self.right_pos = array([11660.379642, 11313.211213, -21326.822815])
 
@@ -41,11 +39,10 @@ class TestNavGPS(TestCase):
         assert_allclose(dist, 0., atol=1e-2)
 
     def test_utc2gps(self):
-        pass
+        self.fail("utc2gps test is not implemented")
 
 
 class TestNavGLO(TestCase):
-    # TODO: GTime is not implemented yet in NavGLO!
     def setUp(self):
         # nav_file = '../../test_data/test.g'
         nav_file = '../../test_data/log_000.15g'
@@ -65,8 +62,7 @@ class TestNavGLO(TestCase):
         :param x: array of length N
         :return: array of length N-1 of the middles between elements of x
         """
-        return map(lambda z: z[0].date +
-                             timedelta(seconds=float((z[1].date - z[0].date).total_seconds()) / 2),
+        return map(lambda z: z[0].date + ((z[1].date - z[0].date) / 2),
                    zip(x[:-1], x[1:]))
 
     def test_eph2pos(self):

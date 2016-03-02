@@ -3,13 +3,15 @@
 
 import datetime as dt
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 from math import sqrt, sin, cos, atan2
-# Origin of GPS time
 from numpy.numarray import zeros
+from gtime import GTime
 
+# Origin of GPS time:
+# ori = GTime(year=1980, month=1, day=6,
 ori = dt.datetime(year=1980, month=1, day=6,
-                  hour=0, minute=0, second=0, microsecond=0)
+                  hour=0, minute=0, second=0)
 
 __author__ = 'kirienko'
 
@@ -22,12 +24,12 @@ c = 2.99792458E8  # GPS value for speed of light [m³/s²]
 Omega_dot_e = 7.2921151467 / 1E5  # WGS84 value of Earth’s rotation rate [rad/s]
 
 
-class Nav():
+class Nav(object):
     def __init__(self, data, header):
         """
         Base navigation class that contains raw data, date and PRN number.
         It also has self.A tuple with three elements, but it is important to remember
-                that these elements have different meaning for GPL and GLO.
+                that these elements have different meaning for GPS and GLO.
 
         :param data: lines of observation data: 8 for GPS, 4 for GLO
         :param header: tuple (LEAP, A0, A1) - almanac parameters for time correction
@@ -45,31 +47,40 @@ class Nav():
 
         # Time of the observation
         if int(self.raw_data[1]) < 2000: self.raw_data[1] = '20' + self.raw_data[1]
-        sec_msec = "%.3f" % float(self.raw_data[6])
-        s, ms = map(int, sec_msec.split('.'))
-        self.date = dt.datetime(*(map(int, self.raw_data[1:6]) + [s, ms * 1000]))  # t_oc
+        sec_msec = float(self.raw_data[6])
+        self.date = GTime(*(map(int, self.raw_data[1:6]) + [sec_msec]))  # t_oc
         if self.leap is None:
             self.leap = def_leap(self.date)
 
         try:
             self.eph = map(float, self.raw_data[10:27])  # broadcast ephemeris
             self.week = int(float(self.raw_data[28]))  # GPS week
-            self.epoch = ori + dt.timedelta(days=self.week * 7)
-            self.t_oe = self.epoch + \
-                        timedelta(seconds=int(self.eph[8])) # time of ephemeris (NB! accuracy: seconds)
+            epoch = ori + dt.timedelta(days=self.week * 7) #it's a date, i.e. hours = mins = sec = 0
+            self.epoch = GTime(*(epoch.timetuple()[:5]))
+            seconds = float(self.eph[8])
+            self.t_oe = self.epoch + seconds
         except IndexError:
             pass
 
 
 class NavGPS(Nav):
     def utc2gps(self, t):
-        delta_t = (t - self.date).total_seconds()
-        if delta_t > 302400:
-            delta_t -= 604800
-        elif delta_t < -302400:
-            delta_t += 604800
+        """
+        GPS-like time (not to be confused with *GPS week + seconds*)
+        :param t:
+        :return:
+        """
+        delta_t = t - self.date
+        if abs(delta_t) > 302400:
+            if delta_t > 302400:
+                while delta_t > 302400:
+                    delta_t -= 604800
+            else:
+                while delta_t < -302400:
+                    delta_t += 604800
         # return t + dt.timedelta(seconds= self.A0 + self.A[0] + self.leap + self.A[1]*delta_t)
-        return t + dt.timedelta(seconds=self.A0 + self.leap + self.A1 * delta_t)
+        # return t + dt.timedelta(seconds=self.A0 + self.leap + self.A1 * delta_t)
+        return t + (self.A0 + self.leap + self.A1 * delta_t)
         # return t + dt.timedelta(seconds=self.A0 + self.A1 * delta_t)
 
     def _time_rel_correction(self, t_sv):
@@ -79,7 +90,8 @@ class NavGPS(Nav):
         :return: the relativistic correction term [in seconds]
         """
         # t = self.utc2gps(t_utc)
-        t_k = (t_sv - self.epoch).total_seconds() - self.eph[8]  # Time from ephemeris epoch
+        # t_k = (t_sv - self.epoch).total_seconds() - self.eph[8]  # Time from ephemeris epoch
+        t_k = (t_sv - self.epoch) - self.eph[8]  # Time from ephemeris epoch
         return -4.442807622e-10 * self.eph[5] * self.eph[7] * sin(self._ecc_anomaly(t_k))
 
     def _ecc_anomaly(self, t_k):
@@ -104,10 +116,11 @@ class NavGPS(Nav):
         :param t_utc:
         :return: Satellite clock bias
         """
-        t_sv = self.utc2gps(t_utc)
-        # t_sv = t_utc
+        # t_sv = self.utc2gps(t_utc)
+        t_sv = t_utc      # TODO: time means as GPS (not UTC)
         # return self.A[0] + self.A[1]*(t_sv - self.date).total_seconds() + \
-        delta = (t_sv - self.date).total_seconds()
+        # delta = (t_sv - self.date).total_seconds()
+        delta = t_sv - self.date
         # print "δt = %d:%02.f min" % (int(delta/60),abs(delta%int(delta/60)))
         return self.A[0] + self.A[1] * delta + \
                self.A[2] * delta ** 2 + \
@@ -140,9 +153,10 @@ class NavGPS(Nav):
         IDOT = self.eph[16]  # Rate of change of inclination angle (i.e., di/dt)
 
         # t = self.utc2gps(t_utc)
-        t = t_utc  # FIXME
+        t = t_utc  # TODO: time means as GPS (not UTC)
         a = sqrt_a ** 2  # print " 1) a = (⎷a)² = %.1f [m]" % a
-        t_k = (t - self.epoch).total_seconds() - t_oe  # Time from ephemeris epoch
+        # t_k = (t - self.epoch).total_seconds() - t_oe  # Time from ephemeris epoch
+        t_k = t - self.epoch - t_oe  # Time from ephemeris epoch
         # print " 3) tₖ = t - t_oe = %f [s]" % t_k
         E = self._ecc_anomaly(t_k)
         sat_lat_phi = atan2(sqrt(1 - e ** 2) * sin(E), cos(E) - e) + omega
@@ -177,11 +191,12 @@ class NavGLO(Nav):
     def __init__(self, data, header):
         Nav.__init__(self, data, header)
         self.TauN, self.GammaN, self.tk = map(float, self.raw_data[7:10])
-        self.t_0 = datetime(*self.date.timetuple()[:3])
+        y_0, m_0, d_0 = self.date.std.timetuple()[:3]
+        self.t_0 = GTime(year=y_0, month=m_0, day=d_0, hour=0, minute=0)
         self.r = np.array([self.eph[0], self.eph[4], self.eph[8]]) * 1e3  # R₀ = (X₀, Y₀, Z₀)
         self.v = np.array([self.eph[1], self.eph[5], self.eph[9]]) * 1e3  # V₀ = (V_x₀, V_y₀, V_z₀)
         self.acc = np.array([self.eph[2], self.eph[6], self.eph[10]]) * 1e3  # a₀ = (a_x₀, a_y₀, a_z₀)
-        self.t_oe = self.t_0 + timedelta(seconds=int(self.tk))
+        self.t_oe = self.t_0 + self.tk
 
         self.RE_GLO = 6378136.0  # radius of earth [m]               ref [2]
         self.MU_GLO = 3.986004418e14  # gravitational constant [m³/s²]         ref [2]
@@ -216,10 +231,11 @@ class NavGLO(Nav):
     def eph2pos(self, time):
         """
         ECEF coordinates of the satellite (based algorithm described in RTKlib manual)
+        :param time: GTime instance
         """
         TSTEP = 60.0  # integration step glonass ephemeris (s)
 
-        t = (time-self.t_0).total_seconds() - self.tk
+        t = (time-self.t_0) - self.tk
 
         if t > 1800:
             print "Warning: probably wrong interpolation period"

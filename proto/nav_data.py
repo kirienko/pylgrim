@@ -80,7 +80,7 @@ class NavGPS(Nav):
                     delta_t += 604800
         # return t + dt.timedelta(seconds= self.A0 + self.A[0] + self.leap + self.A[1]*delta_t)
         # return t + dt.timedelta(seconds=self.A0 + self.leap + self.A1 * delta_t)
-        return t + (self.A0 + self.leap + self.A1 * delta_t)
+        return t - (self.A0 + self.leap + self.A1 * delta_t)
         # return t + dt.timedelta(seconds=self.A0 + self.A1 * delta_t)
 
     def _time_rel_correction(self, t_sv):
@@ -116,8 +116,8 @@ class NavGPS(Nav):
         :param t_utc:
         :return: Satellite clock bias
         """
-        # t_sv = self.utc2gps(t_utc)
-        t_sv = t_utc      # TODO: time means as GPS (not UTC)
+        t_sv = self.utc2gps(t_utc)
+        # t_sv = t_utc      # TODO: time means as GPS (not UTC)
         # return self.A[0] + self.A[1]*(t_sv - self.date).total_seconds() + \
         # delta = (t_sv - self.date).total_seconds()
         delta = t_sv - self.date
@@ -152,8 +152,8 @@ class NavGPS(Nav):
         Omega_dot = self.eph[15]  # dΩ/dt - Rate of change of longitude of the ascending node
         IDOT = self.eph[16]  # Rate of change of inclination angle (i.e., di/dt)
 
-        # t = self.utc2gps(t_utc)
-        t = t_utc  # TODO: time means as GPS (not UTC)
+        t = self.utc2gps(t_utc)
+        # t = t_utc  # TODO: time means as GPS (not UTC)
         a = sqrt_a ** 2  # print " 1) a = (⎷a)² = %.1f [m]" % a
         # t_k = (t - self.epoch).total_seconds() - t_oe  # Time from ephemeris epoch
         t_k = t - self.epoch - t_oe  # Time from ephemeris epoch

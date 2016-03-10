@@ -22,6 +22,21 @@ def get_header_line(headr, property):
             return d
 
 
+def get_header_body(file_path):
+    """
+    Opens `file_path`, reads file and returns header and body
+    separated with "END OF HEADER"
+    :param file_path: path to RINEX-like file
+    :return: header, body (arrays of lines)
+    """
+    with open(file_path) as fd:
+        data = fd.readlines()
+        for j, d in enumerate(data):
+            if "END OF HEADER" in d:
+                header_end = j
+                break
+    return data[:header_end], data[header_end + 1:]
+
 def parse_rinex(path):
     """
     Parse RINEX-file and returns a timeline, i.e. array of tuples
@@ -31,13 +46,7 @@ def parse_rinex(path):
     :return: timeline
     """
 
-    with open(path) as fd:
-        data = fd.readlines()
-        for j, d in enumerate(data):
-            if "END OF HEADER" in d:
-                header_end = j
-                break
-    header, body = data[:header_end], data[header_end + 1:]
+    header, body = get_header_body(path)
 
     # Define RINEX file properties
     rinex_version = re.findall('[0-9]' + '\.?' + '[0-9]*', header[0][:60])[0]
@@ -135,15 +144,14 @@ def parse_sp3(path):
 
 
 if __name__ == "__main__":
-    # navigations = parse_rinex('../test_data/test.n')
-    navigations = parse_rinex('../test_data/test.g')
-    # for k,v in navigations.items(): print k, [str(vv.date)for vv in v]
-    # print "\nSatellites:", ', '.join(sorted(navigations.keys()))
+    navigations = parse_rinex('../test_data/log_000.15g')
+    for k,v in navigations.items(): print k, [str(vv.date)for vv in v]
+    print "\nSatellites:", ', '.join(sorted(navigations.keys()))
     # g = navigations['G05']
-    g = navigations['R04']
+    g = navigations['R03']
     z1, z2 = sorted([g[0], g[1]], key=lambda x: x.date)
     t1, t2 = z1.eph[8], z2.eph[8]
-    print g[0].eph2pos(g[0].date + timedelta(minutes=5))
+    print g[0].eph2pos(g[0].date + 5*60)
 
     # delta_t = dt.timedelta(seconds=t2-t1)
     # print "Δt = t1 - t2 = %s" % delta_t

@@ -110,7 +110,7 @@ def time2gpst(t):
     sec = t - t0  # number of seconds since t0, type: float
     gps_week = int(sec / (86400 * 7))
 
-    return (sec - gps_week * 86400 * 7) + t.sec
+    return (sec - gps_week * 86400 * 7) + (t.sec - int(t.sec))
 
 
 if __name__ == "__main__":

@@ -1,28 +1,15 @@
-Этот файл содержит описание функций, реализующих расчёт атмосферных задержек.
+What already works
 
-tropodelay
+tropospheric delays:
 -------------
-Функция вычисляет значение тропосферной задержки на основании имеющихся входных данных.
-Входные параметры:
-* тропосферная задержка в зените, _units_: m, _type_: float,
-* высота подъема спутника, _units_: rad, _type_: float,
-* зенитное расстояние, _units_: m, _type_: float,
-Выходные параметры:
-* тропосферная задержка, _units_: m, _type_: float,
+* Saastamoinen model: `saast()` - based on RTKlib code. If I were you I wouldn't use it.
+* Vienna mapping function (aka VMF1_HT): `vmf()` - rewritten from Fortran source code
+* parsing of source tropospheric files also implemented:
+one can use `find_VMF_coeffs(ah_file, aw_file, coords)` for this purpose
 
-ionodelay
+ionospheric delays
 ------------
-Функция вычисляет значение ионосферной задержки на основании имеющихся входных данных
+* Klobuchar model: `klobuchar()` - based on RTKlib
+* ionofree pseudorange linear combination
 
-Входные параметры:
-* координаты наблюдателя в системе WGS84, (lat \[rad\], lon \[rad\], alt \[m\]), _type_: float
-* время наблюдения, UNIX timetuple
-* зенитное расстояние, _units_: m, _type_: float,
-* высота подъема спутника, _units_: rad, _type_: float,
-* азимут спутника, _units_: rad, _type_: float,
-* а также:
-  + две частоты передачи спутника (iono-free-модель), _units_: Hz, _type_: float,
-      или
-  + путь к IONEX-файлу, _type_: string
-      или
-  + параметры A0-A3 и B0-B3 ионосферной модели Клобучара, _type_: float
+IONEX maps parsing is to be implemented.

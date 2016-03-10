@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # ! encoding: UTF8
-from math import cos, exp, pi, radians
+from math import sin, cos, exp, pi, radians, floor
 from datetime import datetime
+from gtime import GTime
 
 __author__ = 'kirienko'
 
@@ -46,6 +47,71 @@ def tropmodel(pos, el, time='', coeffs=(), humi=0.75, temp0=15.0):
         return vmf(pos, time, el, coeffs)
     else:
         return saast(pos, el, humi, temp0)
+
+
+
+def klobuchar(pos, az, el, time, iono_coeffs):
+    """
+    Details are taken from [5]: IS-GPS-200H, Fig. 20-4
+    Note: result is referred to the GPS L₁ frequency;
+    if the user is operating on the GPS L₂ frequency, the correction term must
+    be multiplied by γ = f₂²/f₁¹ = 0.6071850227694382
+    :param pos: [lat, lon, alt] in radians and meters
+    """
+
+    if pos[2] < -1E3 or el < 0:
+        return 0.0
+    if len(iono_coeffs) < 8:
+        return None
+
+    # earth centered angle (semi-circle) 
+    psi = 0.0137 / (el / pi + 0.11) - 0.022
+
+    # subionospheric latitude/longitude (semi-circle)
+    phi = pos[0] / pi + psi * cos(az)
+    if phi > 0.416:
+        phi = 0.416
+    elif phi < -0.416:
+        phi = -0.416
+    lam = pos[1] / pi + psi * sin(az) / cos(phi * pi)
+
+    # geomagnetic latitude (semi-circle) */
+    phi += 0.064 * cos((lam - 1.617) * pi)
+
+    # local time (s)
+    tt = 43200.0 * lam + time2gpst(time)
+    tt -= floor(tt / 86400.0) * 86400.0     # 0<=tt<86400
+
+    # slant factor
+    f = 1.0 + 16.0 * pow(0.53 - el / pi, 3.0)
+
+    # ionospheric delay 
+    amp = iono_coeffs[0] + phi * (iono_coeffs[1] + phi * (iono_coeffs[2] + phi * iono_coeffs[3]))
+    per = iono_coeffs[4] + phi * (iono_coeffs[5] + phi * (iono_coeffs[6] + phi * iono_coeffs[7]))
+    if amp < 0.0:
+        amp = 0.
+    if per < 72000.0:
+        per = 72000.0
+    x = 2.0 * pi * (tt - 50400.0) / per
+
+    if abs(x) < 1.57:
+        return 2.99792458E8 * f * (5E-9 + amp * (1.0 + x * x * (-0.5 + x * x / 24.0)))
+    else:
+        return 2.99792458E8 * f * 5E-9
+
+
+def time2gpst(t):
+    """
+    convert GTime to time of week in gps time
+    :param t: GTime instance
+    :return: time of week in gps time (s)
+    """
+    t0 = GTime(1980, 1, 6, 0, 0, 0)  # GPS time reference
+    sec = t - t0  # number of seconds since t0, type: float
+    gps_week = int(sec / (86400 * 7))
+
+    return (sec - gps_week * 86400 * 7) + t.sec
+
 
 if __name__ == "__main__":
     pos = [pi / 3, pi / 6, 100.]

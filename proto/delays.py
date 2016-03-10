@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # ! encoding: UTF8
-from math import sin, cos, exp, pi, radians, floor
 from datetime import datetime
+from math import sin, cos, exp, pi, radians, floor
+
 from gtime import GTime
 
 __author__ = 'kirienko'
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     pos = [pi / 3, pi / 6, 100.]
     azel = 45 * pi / 180
     t = datetime(2016, 1, 1, 0, 0)
-    from vmf import vmf
+    from proto.helper.vmf import vmf
 
     vmf_coeffs = (0.00121328, 0.00043331)
     for h in range(10):

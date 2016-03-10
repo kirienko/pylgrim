@@ -4,7 +4,7 @@ from numpy import deg2rad
 from numpy.testing import assert_allclose
 from unittest import TestCase
 
-from proto.vmf import find_VMF_coeffs, vmf
+from proto.helper.vmf import find_VMF_coeffs, vmf
 
 
 class TestVmf(TestCase):

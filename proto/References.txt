@@ -10,3 +10,5 @@ References:
 [4] Fukushima, T. (2006). Transformation from Cartesian to geodetic coordinates accelerated by Halley’s method.
     Journal of Geodesy, 79(12), 689-693. DOI 10.1007/s00190-006-0023-2
     https://www.researchgate.net/profile/Toshio_Fukushima/publication/264118552_F06-gconv2/links/53ce803e0cf279d93530b524.pdf
+[5] Navstar GPS Space Segment/Navigation User Interfaces. IS-GPS-200H, Interface Specification, 2013.
+    Figure 20-4. Ionospheric Model

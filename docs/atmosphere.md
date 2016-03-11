@@ -12,4 +12,5 @@ ionospheric delays
 * Klobuchar model: `klobuchar()` - based on RTKlib
 * ionofree pseudorange linear combination
 
-IONEX maps parsing is to be implemented.
+IONEX maps parsing is implemented,
+but delays cannot be calculated using the maps at the moment.

@@ -50,7 +50,6 @@ def tropmodel(pos, el, time='', coeffs=(), humi=0.75, temp0=15.0):
         return saast(pos, el, humi, temp0)
 
 
-
 def klobuchar(pos, az, el, time, iono_coeffs):
     """
     Details are taken from [5]: IS-GPS-200H, Fig. 20-4

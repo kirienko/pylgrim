@@ -2,40 +2,13 @@
 # ! encoding: UTF8
 import re
 from collections import defaultdict
+from gtime import GTime
 from nav_data import NavGPS, NavGLO, PreciseNav
 from obs_data import ObsGPS
-from datetime import datetime, timedelta
-from gtime import GTime
+from proto.helper.parsing_utils import get_header_line, get_header_body
 
 __author__ = 'kirienko'
 
-
-def get_header_line(headr, property):
-    """
-    :param headr: the header of the RINEX-file
-    :param property: string-like property to search for (e.g. 'delta-utc')
-    :return: the string of the ``headr`` containing ``property``
-    """
-    pattern = re.compile(property, re.IGNORECASE)
-    for d in headr:
-        if pattern.search(d):
-            return d
-
-
-def get_header_body(file_path):
-    """
-    Opens `file_path`, reads file and returns header and body
-    separated with "END OF HEADER"
-    :param file_path: path to RINEX-like file
-    :return: header, body (arrays of lines)
-    """
-    with open(file_path) as fd:
-        data = fd.readlines()
-        for j, d in enumerate(data):
-            if "END OF HEADER" in d:
-                header_end = j
-                break
-    return data[:header_end], data[header_end + 1:]
 
 def parse_rinex(path):
     """

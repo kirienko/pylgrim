@@ -1,22 +1,16 @@
 #! encoding: utf8
-from proto.parse_rinex import get_header_body, get_header_line
 import datetime as dt
 import numpy as np
+from parsing_utils import get_header_body, get_int_from_header
 
 
-def get_int_from_header(hdr, seq):
-    """
-    Returns the first int from the line that contains `seq` of lines `hdr`.
-    In fact, _header_ here may not be header of RINEX/IONEX, just some set of lines.
-    """
-    return int(get_header_line(hdr, seq).split()[0])
-
-
-def closest_in_list(lst, val, num = 2):
+def closest_in_list(lst, val, num=2):
     """
     Returns two (`num` in general) closest values of `val` in list `lst`
     """
-    return sorted(lst, key=lambda x: abs(x - val))[:num]
+    idxs = sorted(lst, key=lambda x: abs(x - val))[:num]
+    return sorted(map(lambda x: list(lst).index(x), idxs))
+
 
 class IonexMap:
     def __init__(self, exp, data):
@@ -27,18 +21,21 @@ class IonexMap:
         self.lats = np.array([])
         for j, line in enumerate(data[1:]):
             if "LAT" in line:
-                lat, lon1, lon2, dlon, h = map(float,[line[x:x+6] for x in xrange(2,32,6)])
+                lat, lon1, lon2, dlon, h = map(float, [line[x:x + 6] for x in xrange(2, 32, 6)])
                 self.lats = np.append(self.lats, lat)
-                row_length = (lon2 - lon1)/dlon + 1
+                row_length = (lon2 - lon1) / dlon + 1
                 # next_lines_with_numbers = int(np.ceil(row_length / 16))
                 next_lines_with_numbers = int(row_length / 16)
                 last_line_len = int(row_length % 16)
                 row = np.array([], dtype='int16')
                 # print j, lat, lon1, lon2, dlon, h
                 for i in xrange(next_lines_with_numbers):
-                    row = np.append(row, np.array(map(int, [data[j+2+i][5*x:5*x+5] for x in xrange(16)]),dtype='int16'))
+                    row = np.append(row, np.array(map(int, [data[j + 2 + i][5 * x:5 * x + 5] for x in xrange(16)]),
+                                                  dtype='int16'))
                 if last_line_len:
-                    row = np.append(row, np.array(map(int, [data[j+2 + next_lines_with_numbers][5*x:5*x+5] for x in xrange(last_line_len)]), dtype='int16'))
+                    row = np.append(row, np.array(map(int,
+                                                      [data[j + 2 + next_lines_with_numbers][5 * x:5 * x + 5] for x in
+                                                       xrange(last_line_len)]), dtype='int16'))
                 if len(self.grid_TEC) > 0:
                     self.grid_TEC = np.vstack((self.grid_TEC, row))
                 else:
@@ -55,19 +52,36 @@ class IonexMap:
         :param pos:
         :return:
         """
-        lat = self.find_nearest(self.lats, pos[0])
-        lon = self.find_nearest(self.lats, pos[1])
-        return self.grid_TEC[lat][lon] * self.exp
+        if pos[0] in self.lats and pos[1] in self.lons:
+            lat = self.find_nearest(self.lats, pos[0])
+            lon = self.find_nearest(self.lats, pos[1])
+            E = self.grid_TEC[lat][lon] * self.exp
+            return E
+        lat_idxs = closest_in_list(self.lats, pos[0])
+        lon_idxs = closest_in_list(self.lons, pos[1])
+        # print "idxs:", lat_idxs, lon_idxs
+        lat0, lat1 = self.lats[lat_idxs[0]], self.lats[lat_idxs[1]]
+        lon0, lon1 = self.lons[lon_idxs[0]], self.lons[lon_idxs[1]]
+        dlat = lat1 - lat0
+        dlon = lon1 - lon0
+        # print "lat0 =", lat0, " lat1 =", lat1, " dlat =", dlat
+        # print "lon0 =", lon0, " lon1 =", lon1, " dlat =", dlon
+        p = float(pos[0] - lat0) / dlat
+        q = float(pos[1] - lon0) / dlon
+        # print "p = %f, q = %f" % (p, q)
+        (E00, E10), (E01, E11) = self.grid_TEC[lat_idxs[0]:lat_idxs[1] + 1, lon_idxs[0]:lon_idxs[1] + 1] * self.exp
+        # print E00, E01, "\n",E10, E11
+        return (1 - p) * (1 - q) * E00 + p * (1 - q) * E10 + (1 - p) * q * E01 + p * q * E11
 
     @staticmethod
     def round_to_grid(number, base):
-        return int(base * round(float(number)/base))
+        return int(base * round(float(number) / base))
 
 
 def parse_ionex(ionex_file):
     """
     :param ionex_file: path to the IONEX file
-    :return: list of `IonexMap` objects,
+    :return: TEC interpolation function `f( (lat,lon), datetime )`
     """
     header, body = get_header_body(ionex_file)
 
@@ -95,21 +109,36 @@ def parse_ionex(ionex_file):
     for i in xrange(maps_count):
         date = map(int, body[map_start_idx[i] + 1].split()[:6])
         map_dates += [dt.datetime(*date)]
-    print map_dates
-    # def get_TEC(time):
-    #     if time in map_dates:
-    #         return map_dates.index(time)
-    #     elif time > map_dates[0] and time < map_dates[-1]:
-    #         # find two maps closest in time
-    #         closest = closest_in_list(map_dates, time)
-    #         return map(lambda x: map_dates.index(x),closest)
-    #     else:
-    #         raise IndexError("No IONEX map for this time: %s" % str(time))
+    # print map_dates
     maps = []
     for m in xrange(maps_count):
-        iono_map = body[map_start_idx[m]+1:map_end_idx[m]]
+        iono_map = body[map_start_idx[m] + 1:map_end_idx[m]]
         maps += [IonexMap(exponent, iono_map)]
-    return maps
+
+    def interpolate_maps(position, time):
+        """
+        Interpolate TEC at position at the moment `time`
+        :param position: (lat,lon) [deg]
+        :param time: datetime instance
+        :return:
+        """
+        if time in map_dates:
+            return maps[map_dates.index(time)].get_TEC(position)
+        elif time > map_dates[0] and time < map_dates[-1]:
+            # find two maps closest in time
+            closest = closest_in_list(map_dates, time)
+            t0, t1 = map_dates[closest[0]], map_dates[closest[1]]
+            theta = (time - t0).total_seconds() / (t1 - t0).total_seconds()
+            m0, m1 = maps[closest[0]], maps[closest[1]]
+            # print "closest:", closest, "theta =", theta
+            e0, e1 = m0.get_TEC(position), m1.get_TEC(position)
+            # print e0, e1
+            # return map(lambda x: map_dates.index(x),closest)
+            return theta * e0 + (1 - theta) * e1
+        else:
+            raise IndexError("No IONEX map for this time: %s" % str(time))
+
+    return interpolate_maps
 
 
 if __name__ == "__main__":
@@ -117,3 +146,5 @@ if __name__ == "__main__":
 
     ionex = expanduser("~") + "/code/pylgrim/test_data/iter_0/igsg0010.16i"
     M = parse_ionex(ionex)
+    d = dt.datetime(2016, 1, 1, 5, 15)
+    p = (60.1, 30.1)

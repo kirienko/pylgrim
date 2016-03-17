@@ -90,7 +90,6 @@ class NavGPS(Nav):
         :return: the relativistic correction term [in seconds]
         """
         # t = self.utc2gps(t_utc)
-        # t_k = (t_sv - self.epoch).total_seconds() - self.eph[8]  # Time from ephemeris epoch
         t_k = (t_sv - self.epoch) - self.eph[8]  # Time from ephemeris epoch
         return -4.442807622e-10 * self.eph[5] * self.eph[7] * sin(self._ecc_anomaly(t_k))
 
@@ -116,8 +115,8 @@ class NavGPS(Nav):
         :param t_utc:
         :return: Satellite clock bias
         """
-        t_sv = self.utc2gps(t_utc)
-        # t_sv = t_utc      # TODO: time means as GPS (not UTC)
+        # t_sv = self.utc2gps(t_utc)
+        t_sv = t_utc      # TODO: time means as GPS (not UTC)
         # return self.A[0] + self.A[1]*(t_sv - self.date).total_seconds() + \
         # delta = (t_sv - self.date).total_seconds()
         delta = t_sv - self.date
@@ -152,10 +151,9 @@ class NavGPS(Nav):
         Omega_dot = self.eph[15]  # dΩ/dt - Rate of change of longitude of the ascending node
         IDOT = self.eph[16]  # Rate of change of inclination angle (i.e., di/dt)
 
-        t = self.utc2gps(t_utc)
-        # t = t_utc  # TODO: time means as GPS (not UTC)
+        # t = self.utc2gps(t_utc)
+        t = t_utc  # TODO: time means as GPS (not UTC)
         a = sqrt_a ** 2  # print " 1) a = (⎷a)² = %.1f [m]" % a
-        # t_k = (t - self.epoch).total_seconds() - t_oe  # Time from ephemeris epoch
         t_k = t - self.epoch - t_oe  # Time from ephemeris epoch
         # print " 3) tₖ = t - t_oe = %f [s]" % t_k
         E = self._ecc_anomaly(t_k)
@@ -275,7 +273,7 @@ class PreciseNav:
     def __init__(self, date, sat_position):
         self.date = date
         self.t_oe = self.date
-        self.xyzt = np.array(map(float, sat_position))
+        self.xyzt = np.array(map(float, sat_position))  # [km, km, km, mcs]
 
     def eph2pos(self, time=0):
         """

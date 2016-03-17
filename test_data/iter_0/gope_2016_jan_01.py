@@ -1,0 +1,25 @@
+#! encoding: utf8
+
+from proto.coord.ecef import ecef_to_lat_lon_alt as ecef2lla
+from proto.helper.vmf import find_VMF_coeffs
+from proto.parse_rinex import parse_rinex, parse_sp3
+from proto.rover_position import least_squares, distance
+
+if __name__ == '__main__':
+    home = '/home/kirienko/code/pylgrim/test_data/iter_0/'
+    sp3_file = home + 'igs18775.sp3'
+    obs_file = home + 'gope0010.16o.filtered'
+    navs = parse_sp3(sp3_file)
+    obs  = parse_rinex(obs_file)
+
+    zero_epoch = obs[2]
+    print zero_epoch.date
+    a_priori_ecef = [3979316.4389, 1050312.2534, 4857066.9036]  # in meters
+    coords = ecef2lla(a_priori_ecef)
+    print "A priori coordinates:", coords
+    print "A priori ECEF coords:", a_priori_ecef
+    vmf = find_VMF_coeffs(home+'VMF_ah16001.h00', home+'VMF_aw16001.h00', coords)
+    print "VMF1 coefficients: ah = %.7f, aw = %.7f" % vmf
+    for i in range(len(obs)):
+        final = least_squares(obs=obs[i], navs=navs, init_pos=a_priori_ecef, vmf_coeffs=vmf)
+        print "Distance between ans and exact: %.1f m" % distance(a_priori_ecef, final)

@@ -4,6 +4,8 @@ __author__ = 'kirienko'
 
 import datetime as dt
 import re
+from gtime import GTime
+from math import ceil
 
 c = 299792428  # speed of light
 nu_1_G, nu_2_G = 1575.42e6, 1227.6e6  # GPS L1 and L2 frequencies
@@ -12,24 +14,29 @@ isfloat = re.compile("\s{,3}\d+.*")
 
 class ObsGPS():
     def __init__(self, data, obs_types):
-        self.raw_data = data
+        self.raw_data = [rd.replace('\n','') for rd in data]
         self.obs_types = obs_types
         self.obs_types_number = len(obs_types)
+        lpo = int(ceil(float(self.obs_types_number)/5))  # lines per one observation
         self.sat_count = int(data[0][30:32])  # <-- equal to the number of measurements
         if self.sat_count > 12:
-            # concatenate lines 0 and one in ```raw_data```:
+            # concatenate lines 0 and 1 in ```raw_data```:
             self.raw_data[0] = " " + self.raw_data[0].strip() + self.raw_data[1].strip()
             self.raw_data.remove(self.raw_data[1])
+        if lpo > 1:
+            tmp = self.raw_data[1:]
+            concatenated = [''.join(tmp[j:j+lpo]) for j in xrange(0,len(tmp),lpo)]
+            self.raw_data = [self.raw_data[0]] + concatenated
         self.sat_types = self.raw_data[0][32:].strip().replace(' ', '0')
+        # TODO: self.sat_types duplicates self.PRN_number, so do we need this?
         self.PRN_number = [self.sat_types[i * 3:(i + 1) * 3] for i in xrange(self.sat_count)]
 
         # Time of the observation       TODO: move to helper file
         str_date = data[0].split()[:6]
         if int(str_date[0]) < 2000:
             str_date[0] = '20' + str_date[0]
-        sec_msec = "%.6f" % float(str_date[-1])
-        s, ms = map(int, sec_msec.split('.'))
-        self.date = dt.datetime(*(map(int, str_date[:-1]) + [s, ms]))
+        sec_msec = float(str_date[-1])
+        self.date = GTime(*(map(int, str_date[:-1]) + [sec_msec]))
 
         # Pseudoranges etc
 
@@ -42,18 +49,6 @@ class ObsGPS():
             """
             return [matr[j][16 * i:16 * i + 14] for j in xrange(len(matr))]
 
-        def is_def1(x):
-            """
-            If this measurement exists
-            """
-            try:
-                ans = float(x)
-            except ValueError:
-                # print "xxx:",re.match('\s+',x)
-                ans = None
-            return ans
-
-
         def is_def(x):
             if isfloat.match(x):
                 return float(x)
@@ -65,6 +60,10 @@ class ObsGPS():
                              for i, d in enumerate(self.obs_types))
 
     def prn(self, PRN):
+        """
+        :param PRN: satellite name (i.e. 'G07')
+        :return: the number of `PRN` in the list of available satellites (i.e. 3)
+        """
         return self.PRN_number.index(PRN)
 
     @staticmethod
@@ -85,7 +84,6 @@ class ObsGPS():
 
     def pseudorange(self, sat_PRN, obs_type):  # TODO: do we need this?
         """
-
         :param sat_PRN: PRN of the satellite (e.g. 'G21')
         :param obs_type: type of observation (e.g. 'C1')
         :return: pseudorange (in meters) corresponding PRN and type of observation
@@ -98,6 +96,7 @@ class ObsGPS():
 
 if __name__ == "__main__":
     with open('../test_data/test.o') as fd:
+    # with open('../test_data/iter_0/gope0010.16o.filtered') as fd:
         data = fd.readlines()
 
     header_end_marker = "END OF HEADER"

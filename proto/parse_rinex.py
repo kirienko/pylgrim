@@ -2,6 +2,7 @@
 # ! encoding: UTF8
 import re
 from collections import defaultdict
+from math import ceil
 from gtime import GTime
 from nav_data import NavGPS, NavGLO, PreciseNav
 from obs_data import ObsGPS
@@ -74,18 +75,17 @@ def parse_rinex(path):
     elif rinex_type == 'obs':
         obs_types = get_header_line(header, "TYPES OF OBSERV").split()
         number_of_obs_types = int(obs_types[0])
+        lpo = int(ceil(float(number_of_obs_types) / 5))  # lines per one observation
         obs_types = obs_types[1:1 + number_of_obs_types]
-        # print obs_types
-
 
         observations = []
         for j, h in enumerate(body):
             if ('G' in h or 'R' in h) and h[31] in '0123456789':
                 satellite_count = int(h[30:32])
                 if satellite_count > 12:  # sometimes it happens!
-                    observations += [ObsGPS(body[j:j + satellite_count + 2], obs_types)]
+                    observations += [ObsGPS(body[j:j + satellite_count * lpo + 2], obs_types)]
                 else:
-                    observations += [ObsGPS(body[j:j + satellite_count + 1], obs_types)]
+                    observations += [ObsGPS(body[j:j + satellite_count * lpo + 1], obs_types)]
         return observations
     else:
         raise NotImplementedError
@@ -108,7 +108,7 @@ def parse_sp3(path):
             y, m, d, H, M = map(int, split[:-1])
             s = float(split[-1])
             date = GTime(y, m, d, H, M, s)
-        elif d[0:2] == 'PG' and date:   # GPS satellites
+        elif d[0:2] == 'PG' and date:  # GPS satellites
             prn, x, y, z, t = d[2:].split()[:5]
             nav_dict['G' + "%02d" % int(prn)] += [PreciseNav(date, (x, y, z, t))]
         else:
@@ -118,13 +118,11 @@ def parse_sp3(path):
 
 if __name__ == "__main__":
     navigations = parse_rinex('../test_data/log_000.15g')
-    for k,v in navigations.items(): print k, [str(vv.date)for vv in v]
     print "\nSatellites:", ', '.join(sorted(navigations.keys()))
     # g = navigations['G05']
     g = navigations['R03']
     z1, z2 = sorted([g[0], g[1]], key=lambda x: x.date)
     t1, t2 = z1.eph[8], z2.eph[8]
-    print g[0].eph2pos(g[0].date + 5*60)
 
     # delta_t = dt.timedelta(seconds=t2-t1)
     # print "Δt = t1 - t2 = %s" % delta_t

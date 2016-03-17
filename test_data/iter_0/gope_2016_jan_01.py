@@ -7,8 +7,10 @@ from proto.rover_position import least_squares, distance
 
 if __name__ == '__main__':
     home = '/home/kirienko/code/pylgrim/test_data/iter_0/'
-    sp3_file = home + 'igs18775.sp3'
-    obs_file = home + 'gope0010.16o.filtered'
+    # sp3_file = home + 'igs18775.sp3'    # <-- GPS
+    sp3_file = home + 'igl18775.sp3'    # <-- GLONASS
+    # obs_file = home + 'gope0010.16o.GPS.filtered'
+    obs_file = home + 'gope0010.16o.GLO.filtered'
     navs = parse_sp3(sp3_file)
     obs  = parse_rinex(obs_file)
 
@@ -20,6 +22,6 @@ if __name__ == '__main__':
     print "A priori ECEF coords:", a_priori_ecef
     vmf = find_VMF_coeffs(home+'VMF_ah16001.h00', home+'VMF_aw16001.h00', coords)
     print "VMF1 coefficients: ah = %.7f, aw = %.7f" % vmf
-    for i in range(len(obs)):
-        final = least_squares(obs=obs[i], navs=navs, init_pos=a_priori_ecef, vmf_coeffs=vmf)
-        print "Distance between ans and exact: %.1f m" % distance(a_priori_ecef, final)
+    for o in obs:
+        final = least_squares(obs=o, navs=navs, init_pos=a_priori_ecef, vmf_coeffs=vmf)
+        print str(o.date)[11:19], "Accuracy: %.1f m" % distance(a_priori_ecef, final)

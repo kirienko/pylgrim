@@ -100,7 +100,6 @@ def parse_sp3(path):
     with open(path) as fd:
         data = fd.readlines()
     print "\nParsing %s:" % path
-    # FIXME: GPS ONLY!
     nav_dict = defaultdict(list)
     for j, d in enumerate(data):
         if d[0] == '*':
@@ -108,9 +107,9 @@ def parse_sp3(path):
             y, m, d, H, M = map(int, split[:-1])
             s = float(split[-1])
             date = GTime(y, m, d, H, M, s)
-        elif d[0:2] == 'PG' and date:  # GPS satellites
+        elif d[0] == 'P' and date:  # GPS satellites
             prn, x, y, z, t = d[2:].split()[:5]
-            nav_dict['G' + "%02d" % int(prn)] += [PreciseNav(date, (x, y, z, t))]
+            nav_dict[d[1] + "%02d" % int(prn)] += [PreciseNav(date, (x, y, z, t))]
         else:
             continue
     return nav_dict

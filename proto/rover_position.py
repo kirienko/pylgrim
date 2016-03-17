@@ -65,7 +65,8 @@ def least_squares(obs, navs, init_pos='', vmf_coeffs=()):
     sats = []
     for r in obs.PRN_number:
         # print r, "Data:", obs.obs_data['C1'][obs.prn(r)], obs.obs_data['P2'][obs.prn(r)]
-        if obs.obs_data['C1'][obs.prn(r)] and obs.obs_data['P2'][obs.prn(r)] and ('G' in r):      # iono-free
+        # if obs.obs_data['C1'][obs.prn(r)] and obs.obs_data['P2'][obs.prn(r)] and ('G' in r):      # iono-free
+        if obs.obs_data['C1'][obs.prn(r)] and obs.obs_data['P1'][obs.prn(r)] and ('R' in r):      # iono-free
         # if obs.obs_data['C1'][i] and ('G' in r):                                # C1 only
             nnt = nav_nearest_in_time(now, navs[r])
             if len(init_pos):
@@ -77,8 +78,8 @@ def least_squares(obs, navs, init_pos='', vmf_coeffs=()):
     # Form matrix if N >= 4:
     if len(sats) > 3:
         # observed [iono-free] pseudoranges
-        P = np.array([obs.ionofree_pseudorange(s[0]) for s in sats])        # iono-free
-        # P = np.array([obs.obs_data['C1'][obs.prn(s[0])] for s in sats])     # C1 only
+        # P = np.array([obs.ionofree_pseudorange(s[0]) for s in sats])        # iono-free
+        P = np.array([obs.obs_data['C1'][obs.prn(s[0])] for s in sats])     # C1 only
         # get XYZ-coords of satellites
         XYZs = np.array([s[1].eph2pos(now) for s in sats])  # len(XYZs[0]) = 3
         # print "XYZs =",XYZs
@@ -136,7 +137,7 @@ def least_squares(obs, navs, init_pos='', vmf_coeffs=()):
     Q = (AT * A).I
     S_T = R * Q[0:3, 0:3] * R.transpose()
     GDOP = sqrt(sum(S_T.diagonal().getA()[0]) + Q[3, 3])
-    print "GDOP = %.3f, VDOP = %.3f" % (GDOP,sqrt(S_T[2,2]))
+    # print "GDOP = %.3f, VDOP = %.3f" % (GDOP,sqrt(S_T[2,2]))
     return xyzt[:3]
     # else:
         # errors = {s[0]:(l - A*x_hat_matrix).tolist()[i][0] for i,s in enumerate(sats)}

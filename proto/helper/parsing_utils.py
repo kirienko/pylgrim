@@ -1,13 +1,13 @@
 import re
 
 
-def get_header_line(headr, property):
+def get_header_line(headr, proprty):
     """
     :param headr: the header of the RINEX-file
-    :param property: string-like property to search for (e.g. 'delta-utc')
+    :param proprty: string-like property to search for (e.g. 'delta-utc')
     :return: the string of the ``headr`` containing ``property``
     """
-    pattern = re.compile(property, re.IGNORECASE)
+    pattern = re.compile(proprty, re.IGNORECASE)
     for d in headr:
         if pattern.search(d):
             return d

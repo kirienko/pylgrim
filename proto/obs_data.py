@@ -12,7 +12,8 @@ nu_1_G, nu_2_G = 1575.42e6, 1227.6e6  # GPS L1 and L2 frequencies
 l1_G, l2_G = c / nu_1_G, c / nu_2_G
 isfloat = re.compile("\s{,3}\d+.*")
 
-class ObsGPS():
+
+class ObsGPS:
     def __init__(self, data, obs_types):
         self.raw_data = [rd.replace('\n','') for rd in data]
         self.obs_types = obs_types

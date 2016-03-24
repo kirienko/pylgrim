@@ -3,7 +3,7 @@ from unittest import TestCase
 from numpy.testing import assert_allclose
 from proto.nav_data import PreciseNav
 from proto.parse_rinex import parse_rinex, parse_sp3
-from proto.rover_position import least_squares, distance
+from proto.least_squares import least_squares, distance
 # from proto.vmf import find_VMF_coeffs
 
 td_path = '../../test_data/'

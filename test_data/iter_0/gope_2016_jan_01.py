@@ -3,7 +3,7 @@
 from proto.coord.ecef import ecef_to_lat_lon_alt as ecef2lla
 from proto.helper.vmf import find_VMF_coeffs
 from proto.parse_rinex import parse_rinex, parse_sp3
-from proto.rover_position import least_squares, distance
+from proto.least_squares import least_squares, distance
 
 if __name__ == '__main__':
     home = '/home/kirienko/code/pylgrim/test_data/iter_0/'

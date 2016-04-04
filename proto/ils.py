@@ -8,15 +8,13 @@ See:    Chang, Xiao-Wen, and Tianyang Zhou.
         GPS Solutions 11.4 (2007): 289-294.
         DOI: 10.1007/s10291-007-0063-y
 """
+
 from __future__ import division
+
 from numpy import arange, append, array, dot, inf, ones, sign, sqrt, triu, zeros
-from numpy.linalg import lstsq, norm, solve, qr
+from numpy.linalg import lstsq, norm, qr
 from numpy.linalg import matrix_rank as rank
-# for tests:
-from oct2py import octave, Oct2Py
-from os.path import expanduser as eu
-octave.addpath(eu('~')+'/code/pylgrim/ils')
-oc = Oct2Py()
+
 
 def qrmcp(B, y):
     """
@@ -104,13 +102,9 @@ def reduction(B, y):
 
     # QR with minimum-column pivoting
     R, piv, y_q = qrmcp(B.copy(), y.copy())
-    R_q, piv_q, y_q_ = octave.qrmcp(B.copy(), y.copy())
-    pprint_two_matrices(R, R_q, name1="R (QR,python)", name2="R (QR, octave)")
-    pprint_two_matrices(piv+1, piv_q, name1="piv (QR,python)", name2="piv (QR, octave)")
-    pprint_two_matrices(y_q, y_q_, name1="y (QR,python)", name2="y (QR, octave)")
 
     # Obtain the permutation matrix Z
-    Z = zeros((n, n))
+    Z = zeros((n, n), dtype=int)
     for j in xrange(n):
         Z[piv[j]][j] = 1
     # Perform partial LLL reduction on R
@@ -138,19 +132,15 @@ def reduction(B, y):
             Z[:, k1], Z[:, k] = Z[:, k].copy(), Z[:, k1].copy()
 
             # Bring R back to an upper triangular matrix by a Givens rotation
-            # TODO: Matlab style, sorry
             r = sqrt(R[k1, k1] ** 2 + R[k, k1] ** 2)
             c = R[k1, k1] / r
             s = R[k, k1] / r
             G = array([[c, s], [-s, c]])
             R[k1, k1] = r
             R[k, k1] = 0
-            # Y.K.: tricky code, but note that `k1=k-1`, original code was:
-            # R([k1,k],k:n) = G*R([k1,k],k:n);
             R[k1:k + 1, k:] = dot(G, R[k1:k + 1, k:])
 
             # Apply the Givens rotation to y
-            # Y.K.: same here:
             y_q[k1:k + 1] = dot(G, y_q[k1:k + 1])
 
             if k > 1:
@@ -240,27 +230,17 @@ def search(R, y, p=1):
     return z_hat
 
 
-def ils1(B, y, p=1):
+def ils(B, y, p=1):
     m, n = B.shape
 
     if rank(B) < n:
         raise ValueError("Matrix is rank deficient!")
 
     # Reduction
-    print("=== Reduction ===")
     R, Z_r, y_r = reduction(B.copy(), y.copy())
-    _R, _Z_r, _y_r = octave.reduction(B.copy(), y.copy())
-    # pprint_two_matrices(R, _R,name1="R (python)",name2="R (matlab)")
-    pprint_two_matrices(Z_r, _Z_r,name1="Z (python)",name2="Z (matlab)")
-    # pprint_two_matrices(y_r, _y_r,name1="y (python)",name2="y (matlab)")
 
     # Search
     _z_hat = search(R.copy(), y_r[:n].copy(), p)
-    _z_hat_ = octave.search(R.copy(), y_r[:n].copy(), p)
-    # print("=== Search ===")
-
-
-    pprint_two_matrices(y_r, _y_r, name1="y (python)", name2="y (matlab)")  # Perform the unimodual transformation to obtain the optimal solutions
     return dot(Z_r, _z_hat)
 
 
@@ -300,83 +280,27 @@ def mils(A, B, y, p=1):
     z_hat = ils(dot(Q_Abar.T, B), dot(Q_Abar.T, y), p)
 
     # Compute the corresponding real least squares solutions
-    # x_hat = solve(R_A, (Q_A.T * (y * ones(p) - B * z_hat)))
     x_hat = lstsq(R_A, dot(Q_A.T, (dot(y, ones(p)) - dot(B, z_hat))))
 
     return x_hat, z_hat
 
 
-def pprint_two_matrices(M1, M2, dtype='float', name1='', name2=''):
-    """
-    Pretty print two matrices (of the same size) in parallel
-    """
-    if len(M1) != len(M2):
-        if len(M1.reshape(1, max(M1.shape))) != len(M2.reshape(1, max(M2.shape))):
-            print "Matrices are of different length: %d and %d" % (len(M1), len(M2))
-            return
-        else:
-            _M1 = M1.reshape(1, max(M1.shape)).astype(dtype)
-            _M2 = M2.reshape(1, max(M2.shape)).astype(dtype)
-    else:
-        _M1, _M2 = M1.astype(dtype), M2.astype(dtype)
-    len_M = len(_M1)
-    len_str = lambda x: len(str(x))
-    max_elem_len = min(8, max(map(len_str, M1.flatten()) + map(len_str, M2.flatten())))
-    width = (len(_M1[0])) * (max_elem_len + 3)
-    eq = "=" if (_M1 == _M2).all() else "≠"
-    print
-    if name1 or name2:
-        print "{:^{}}".format(name1, width) + eq + "{:^{}}".format(name2, width)
-    for j in xrange(len_M):
-        q1, q2 = map(str, _M1[j]), map(str, _M2[j])
-        str1 = " ".join(map(lambda x: '{:>{}.{}}'.format(x, max_elem_len + 2, max_elem_len), q1))
-        str2 = " ".join(map(lambda x: '{:>{}.{}}'.format(x, max_elem_len + 2, max_elem_len), q2))
-        print str1 + ' | ' + str2
-
 if __name__ == "__main__":
     from numpy.random import rand
-    from numpy import dot
 
     m, n = 5, 3
     print "Initital size of matrix B: %d × %d" % (m, n)
     B = rand(m, n)
-    # B = array([[-1.38483, 0.53704, 0.14925],  # ans:
-    #            [1.05734, 0.61432, 0.94116],  # v1    v2
-    #            [-0.33438, -0.13293, -0.60755],  # 1     1
-    #            [0.26814, 0.41059, -0.52649],  # -2    -1
-    #            [-0.66335, -1.42715, -0.97412]])  # 3     2
-    # B = array([[0.86589571,  0.00318145,  0.20032933],
-    #            [0.43521184,  0.78384061,  0.88600684],
-    #            [0.0789691, 0.59985536, 0.19461526],
-    #            [0.06868679,  0.2060566,   0.67653133],
-    #            [0.38612796, 0.67405401, 0.37918118]])
-    # B = array([[0.70287019,  0.71877211,  0.75581009],
-    #            [0.87602847,  0.91164918,  0.1429133],
-    #            [0.04456815, 0.73969409, 0.65638924],
-    #            [0.88139012,  0.26161392,  0.66075499],
-    #            [0.42678271, 0.80180714, 0.47110755]])
     print "B =\n", B
-    # print
+
     z_true = array([1, -2, 3]).reshape(3, 1)  # column vector
     y = dot(B, z_true) + 1e-3 * rand(m, 1)
-    # y = array([-2.01129, 2.65187, -1.89005, -2.13294, -0.73144]).reshape(m, 1)
-    # y = array([1.4609186, 1.5264849, -0.53682774, 1.68681493, 0.17646032]).reshape(m, 1)
-    # y = array([1.53307221, -0.5181633, 0.53525635, 2.341379, 0.237413]).reshape(m, 1)
+
     print "y' =", y.T
 
     p = 2
-    Z = ils1(B.copy(), y.copy(), p)
+    Z = ils(B.copy(), y.copy(), p)
 
-    # from oct2py import octave
-    # from os.path import expanduser as eu
-    # octave.addpath(eu('~')+'/code/pylgrim/ils')
-    Z_oct = octave.ils(B, y, p)
-
-    # print "B =\n", B
-    # print "y' =", y.T
-
-    ok = "OK" if (Z == Z_oct).all() else  "WRONG!"
-
+    ok = "OK" if (Z.T[0] == z_true.T).all() else "WRONG!"
     print "\n=== Solutions: %s ===" % ok
-
-    pprint_two_matrices(Z, Z_oct, name2="From MATLAB:")
+    print Z

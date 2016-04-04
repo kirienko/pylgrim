@@ -9,13 +9,14 @@ See:    Chang, Xiao-Wen, and Tianyang Zhou.
         DOI: 10.1007/s10291-007-0063-y
 """
 from __future__ import division
-from numpy import arange, array, dot, inf, ones, sqrt, triu, zeros
+from numpy import arange, append, array, dot, inf, ones, sign, sqrt, triu, zeros
 from numpy.linalg import lstsq, norm, solve, qr
 from numpy.linalg import matrix_rank as rank
 # for tests:
-from oct2py import octave
+from oct2py import octave, Oct2Py
 from os.path import expanduser as eu
 octave.addpath(eu('~')+'/code/pylgrim/ils')
+oc = Oct2Py()
 
 def qrmcp(B, y):
     """
@@ -49,17 +50,17 @@ def qrmcp(B, y):
     for k in xrange(n):
         # Find the column with minimum 2-norm in B(k+1:m,k+1:n)
         tmp = colnormB[0, k:] - colnormB[1, k:]
-        minnorm, i = tmp.min(), tmp.argmin()
+        i = tmp.argmin()
         q = i + k
 
         # Column interchange
         if q > k:
-            piv[k], piv[q] = piv[q], piv[k]
-            colnormB[:, k], colnormB[:, q] = colnormB[:, q], colnormB[:, k]
+            piv[k], piv[q] = piv[q].copy(), piv[k].copy()
+            colnormB[:, k], colnormB[:, q] = colnormB[:, q].copy(), colnormB[:, k].copy()
             B[:, k], B[:, q] = B[:, q].copy(), B[:, k].copy()
         # Compute and apply the Householder transformation  I-tau*v*v'
         if norm(B[k + 1:, k]) > 0:  # otherwise no Householder transformation is needed
-            v = B[k:, k].reshape(m - k, 1).copy()  # v = column-vector
+            v = (B[k:, k].copy()).reshape(m - k, 1)  # v = column-vector
             rho = norm(v)  # scalar
             if v[0] >= 0:
                 rho = -rho
@@ -104,8 +105,9 @@ def reduction(B, y):
     # QR with minimum-column pivoting
     R, piv, y_q = qrmcp(B.copy(), y.copy())
     R_q, piv_q, y_q_ = octave.qrmcp(B.copy(), y.copy())
-    pprint_two_matrices(R,R_q,name1="R (QR,python)", name2="R (QR, octave)")
-    pprint_two_matrices(piv,piv_q,name1="piv (QR,python)", name2="piv (QR, octave)")
+    pprint_two_matrices(R, R_q, name1="R (QR,python)", name2="R (QR, octave)")
+    pprint_two_matrices(piv+1, piv_q, name1="piv (QR,python)", name2="piv (QR, octave)")
+    pprint_two_matrices(y_q, y_q_, name1="y (QR,python)", name2="y (QR, octave)")
 
     # Obtain the permutation matrix Z
     Z = zeros((n, n))
@@ -115,7 +117,7 @@ def reduction(B, y):
     k = 1
     while k < n:
         k1 = k - 1
-        zeta = round(R[k1, k] / R[k1, k1])  # NB: division from __future__ is critical here
+        zeta = int(round(R[k1, k] / R[k1, k1]))  # NB: division from __future__ is critical here
         alpha = R[k1, k] - zeta * R[k1, k1]
 
         if R[k1, k1] ** 2 > (1 + 1.e-10) * (alpha ** 2 + R[k, k] ** 2):
@@ -126,9 +128,9 @@ def reduction(B, y):
                 Z[:, k] -= zeta * Z[:, k-1]
                 # Perform size reductions on R(:k-2,k)
                 for i in xrange(k - 2, -1, -1):
-                    zeta = round(R[i, k] / R[i, i])
+                    zeta = int(round(R[i, k] / R[i, i]))
                     if zeta != 0:
-                        R[:i, k] = R[:i, k] - zeta * R[:i, i]
+                        R[:i+1, k] = R[:i+1, k] - zeta * R[:i+1, i]
                         Z[:, k] = Z[:, k] - zeta * Z[:, i]
 
             # Permute columns k-1 and k of R
@@ -149,14 +151,14 @@ def reduction(B, y):
 
             # Apply the Givens rotation to y
             # Y.K.: same here:
-            y[k1:k + 1] = dot(G, y[k1:k + 1])
+            y_q[k1:k + 1] = dot(G, y_q[k1:k + 1])
 
             if k > 1:
                 k -= 1
         else:
             k += 1
 
-    return R, Z, y
+    return R, Z, y_q
 
 
 def search(R, y, p=1):
@@ -194,10 +196,7 @@ def search(R, y, p=1):
     c[nn] = y[nn] / R[nn, nn]
     z[nn] = int(round(c[nn]))
     gamma = R[nn, nn] * (c[nn] - z[nn])
-    if c[nn] > z[nn]:
-        d[nn] = 1
-    else:
-        d[nn] = -1
+    d[nn] = sign(c[nn] - z[nn])
 
     k = nn
 
@@ -205,16 +204,13 @@ def search(R, y, p=1):
         newprsd = prsd[k] + gamma * gamma
         if newprsd < beta:
             if k != 0:  # move to level k-1
-                S[:k+1, k] += R[:k+1, k] * z[k] + S[:k+1, k+1]
+                S[:k+1, k] = R[:k+1, k] * z[k] + S[:k+1, k+1]
                 k -= 1
                 prsd[k] = newprsd
                 c[k] = (y[k] - S[k, k + 1]) / R[k, k]
                 z[k] = int(round(c[k]))
                 gamma = R[k, k] * (c[k] - z[k])
-                if c[k] > z[k]:
-                    d[k] = 1
-                else:
-                    d[k] = -1
+                d[k] = sign(c[k] - z[k])
             else:  # a new point is found, update the set of candidate solutions
                 if ncand < p:  # add the new point
                     z_hat[:, ncand] = z.T
@@ -224,17 +220,15 @@ def search(R, y, p=1):
                         beta = rsd[-1]
                 else:  # insert the new point and remove the worst one
                     i = 0
-                    while i < p-1 and rsd[i] < newprsd:
+                    while i < p-1 and rsd[i] <= newprsd:
                         i += 1
-                    z_hat[:, i:] = [z, z_hat[:, i:-1]]
-                    rsd[i:] = [newprsd, rsd[i:-1]]
-                    beta = rsd[p-1]
-                z[0] = z[0] + d[0]
+                    z_hat[:, i:] = append(z, z_hat[:, :-1], axis=1)
+                    # print newprsd,rsd, append(newprsd, rsd[:-1])
+                    rsd[i:] = append(newprsd, rsd[i:-1])
+                    beta = rsd[-1]
+                z[0] += d[0]
                 gamma = R[0, 0] * (c[0] - z[0])
-                if d[0] > 0:
-                    d[0] = -d[0] - 1
-                else:
-                    d[0] = -d[0] + 1
+                d[0] = -d[0] - sign(d[0])
         else:
             if k == n-1:  # the p optimal solutions have been found
                 break
@@ -242,10 +236,7 @@ def search(R, y, p=1):
                 k += 1
                 z[k] += d[k]
                 gamma = R[k, k] * (c[k] - z[k])
-                if d[k] > 0:
-                    d[k] = -d[k] - 1
-                else:
-                    d[k] = -d[k] + 1
+                d[k] = -d[k] - sign(d[k])
     return z_hat
 
 
@@ -259,15 +250,17 @@ def ils1(B, y, p=1):
     print("=== Reduction ===")
     R, Z_r, y_r = reduction(B.copy(), y.copy())
     _R, _Z_r, _y_r = octave.reduction(B.copy(), y.copy())
-    pprint_two_matrices(R, _R,name1="R (python)",name2="R (matlab)")
+    # pprint_two_matrices(R, _R,name1="R (python)",name2="R (matlab)")
     pprint_two_matrices(Z_r, _Z_r,name1="Z (python)",name2="Z (matlab)")
+    # pprint_two_matrices(y_r, _y_r,name1="y (python)",name2="y (matlab)")
 
     # Search
     _z_hat = search(R.copy(), y_r[:n].copy(), p)
-    print("=== Search ===")
     _z_hat_ = octave.search(R.copy(), y_r[:n].copy(), p)
+    # print("=== Search ===")
 
-    # Perform the unimodual transformation to obtain the optimal solutions
+
+    pprint_two_matrices(y_r, _y_r, name1="y (python)", name2="y (matlab)")  # Perform the unimodual transformation to obtain the optimal solutions
     return dot(Z_r, _z_hat)
 
 
@@ -352,24 +345,31 @@ if __name__ == "__main__":
     #            [-0.33438, -0.13293, -0.60755],  # 1     1
     #            [0.26814, 0.41059, -0.52649],  # -2    -1
     #            [-0.66335, -1.42715, -0.97412]])  # 3     2
-    B = array([[ 0.66456276,  0.26352592,  0.853691  ],
-               [ 0.91379849,  0.19624231,  0.59176225],
-               [ 0.40818463,  0.56173452,  0.84286355],
-               [ 0.95138348,  0.5210463,   0.61106613],
-               [ 0.68555716,  0.17760152,  0.4324968 ]])
+    # B = array([[0.86589571,  0.00318145,  0.20032933],
+    #            [0.43521184,  0.78384061,  0.88600684],
+    #            [0.0789691, 0.59985536, 0.19461526],
+    #            [0.06868679,  0.2060566,   0.67653133],
+    #            [0.38612796, 0.67405401, 0.37918118]])
+    # B = array([[0.70287019,  0.71877211,  0.75581009],
+    #            [0.87602847,  0.91164918,  0.1429133],
+    #            [0.04456815, 0.73969409, 0.65638924],
+    #            [0.88139012,  0.26161392,  0.66075499],
+    #            [0.42678271, 0.80180714, 0.47110755]])
     print "B =\n", B
     # print
     z_true = array([1, -2, 3]).reshape(3, 1)  # column vector
-    # y = dot(B, z_true) + 1e-3 * rand(m, 1)
-    y = array([-2.01129, 2.65187, -1.89005, -2.13294, -0.73144]).reshape(m, 1)
-    # print "y' =", y.T
+    y = dot(B, z_true) + 1e-3 * rand(m, 1)
+    # y = array([-2.01129, 2.65187, -1.89005, -2.13294, -0.73144]).reshape(m, 1)
+    # y = array([1.4609186, 1.5264849, -0.53682774, 1.68681493, 0.17646032]).reshape(m, 1)
+    # y = array([1.53307221, -0.5181633, 0.53525635, 2.341379, 0.237413]).reshape(m, 1)
+    print "y' =", y.T
 
     p = 2
     Z = ils1(B.copy(), y.copy(), p)
 
-    from oct2py import octave
-    from os.path import expanduser as eu
-    octave.addpath(eu('~')+'/code/pylgrim/ils')
+    # from oct2py import octave
+    # from os.path import expanduser as eu
+    # octave.addpath(eu('~')+'/code/pylgrim/ils')
     Z_oct = octave.ils(B, y, p)
 
     # print "B =\n", B

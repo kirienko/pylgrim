@@ -11,7 +11,7 @@ See:    Chang, Xiao-Wen, and Tianyang Zhou.
 
 from __future__ import division
 
-from numpy import arange, append, array, dot, inf, ones, sign, sqrt, triu, zeros
+from numpy import arange, append, array, delete, dot, inf, ones, sign, sqrt, triu, zeros
 from numpy.linalg import lstsq, norm, qr
 from numpy.linalg import matrix_rank as rank
 
@@ -209,12 +209,13 @@ def search(R, y, p=1):
                     if ncand == p:
                         beta = rsd[-1]
                 else:  # insert the new point and remove the worst one
-                    i = 0
-                    while i < p-1 and rsd[i] <= newprsd:
-                        i += 1
-                    z_hat[:, i:] = append(z, z_hat[:, :-1], axis=1)
-                    # print newprsd,rsd, append(newprsd, rsd[:-1])
-                    rsd[i:] = append(newprsd, rsd[i:-1])
+                    # i = 0
+                    i = rsd.argmax()
+                    # while i < p-1 and rsd[i] <= newprsd:
+                    #     i += 1
+                    # z_hat[:, i:] = append(z, z_hat[:, :-1], axis=1)
+                    z_hat = append(z.copy(), delete(z_hat.copy(), i, axis=1)).reshape((n, p))
+                    rsd = append(newprsd, delete(rsd, i))
                     beta = rsd[-1]
                 z[0] += d[0]
                 gamma = R[0, 0] * (c[0] - z[0])
@@ -265,22 +266,22 @@ def mils(A, B, y, p=1):
 
     m, k = A.shape
     m2, n = B.shape
-    if m != m2 or m != len(y[0]) or len(y[1]) != 1:
+    if m != m2 or m != len(y) or len(y[1]) != 1:
         raise ValueError("Input arguments have a matrix dimension error!")
 
     if rank(A) + rank(B) < k + n:
         raise ValueError("hmmm...")
 
-    Q, R = qr(A)
+    Q, R = qr(A, mode='complete')
     Q_A = Q[:, :k]
-    Q_Abar = Q[:, k:m]
+    Q_Abar = Q[:, k:]
     R_A = R[:k, :]
 
     # Compute the p optimal integer least squares solutions
     z_hat = ils(dot(Q_Abar.T, B), dot(Q_Abar.T, y), p)
 
     # Compute the corresponding real least squares solutions
-    x_hat = lstsq(R_A, dot(Q_A.T, (dot(y, ones(p)) - dot(B, z_hat))))
+    x_hat = lstsq(R_A, dot(Q_A.T, (dot(y, ones((1, p))) - dot(B, z_hat))))
 
     return x_hat, z_hat
 
@@ -303,4 +304,20 @@ if __name__ == "__main__":
 
     ok = "OK" if (Z.T[0] == z_true.T).all() else "WRONG!"
     print "\n=== Solutions: %s ===" % ok
+    print Z
+
+
+    print "MILS:"
+    m = 7
+    k = 2
+    n = 3
+    p = 3
+    A = rand(m, k)
+    B = rand(m, n)
+    y = rand(m, 1)
+
+    print "Three pairs of optimal least squares solutions"
+    X, Z = mils(A, B, y, p)
+
+    print X
     print Z

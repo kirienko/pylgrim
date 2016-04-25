@@ -30,6 +30,7 @@ For now one can obtain rover's position by using single- or dual-frequency
 + Vienna mapping function (aka `VMF1_HT`) implemented.
 + Ionospheric delays from IONEX maps implemented.
 + Klobuchar (broadcast) ionospheric model implemented.
++ [MILES algorithm](http://www.cs.mcgill.ca/~chang/software/MILES_Theory_Alg.pdf) reimplemented in python
 
 Dependencies:
 ------------
@@ -43,4 +44,4 @@ Maybe some day:
 --------------
 * GPS and GLONASS with 10 meter accuracy
 * moving rover
-* phase ambiguity (c'mon, you're kiddin'!)
+* phase ambiguity (stay tuned!)

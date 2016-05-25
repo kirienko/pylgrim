@@ -13,7 +13,11 @@ from delays import tropmodel
 __author__ = 'kirienko'
 
 """
-1. Parse Nav file --> ephemerids --> sat coords (ECEF)
+This module provides least squares method of solution of navigational problem.
+
+    TODO: weighted LS
+
+1. Parse Nav file --> ephemerides --> sat coords (ECEF)
 2. Parse Obs file --> pseudoranges to rover
 3. Calculate rover's coords in ECEF
 """
@@ -65,8 +69,8 @@ def least_squares(obs, navs, init_pos='', vmf_coeffs=()):
     sats = []
     for r in obs.PRN_number:
         # print r, "Data:", obs.obs_data['C1'][obs.prn(r)], obs.obs_data['P2'][obs.prn(r)]
-        # if obs.obs_data['C1'][obs.prn(r)] and obs.obs_data['P2'][obs.prn(r)] and ('G' in r):      # iono-free
-        if obs.obs_data['C1'][obs.prn(r)] and obs.obs_data['P1'][obs.prn(r)] and ('R' in r):      # iono-free
+        if obs.obs_data['C1'][obs.prn(r)] and obs.obs_data['P2'][obs.prn(r)] and ('G' in r):      # iono-free
+        # if obs.obs_data['C1'][obs.prn(r)] and obs.obs_data['P1'][obs.prn(r)] and ('R' in r):      # iono-free
         # if obs.obs_data['C1'][i] and ('G' in r):                                # C1 only
             nnt = nav_nearest_in_time(now, navs[r])
             if len(init_pos):
@@ -92,7 +96,7 @@ def least_squares(obs, navs, init_pos='', vmf_coeffs=()):
     #     print "sats:", sats, init_pos
     #     return None
     # if err == {}: err = {s[0]:0. for s in sats}
-    xyzt = [1e-10,1e-10,1e-10,0.] # initial point
+    xyzt = [1e-10, 1e-10, 1e-10, 0.]   # initial point
     if len(init_pos):
         xyzt = init_pos + [0.]
     # print "initial position:", lla_string(ecef_to_lat_lon_alt(xyzt)), tuple(xyzt[:3])
@@ -129,21 +133,15 @@ def least_squares(obs, navs, init_pos='', vmf_coeffs=()):
         # XYZs = np.array([s[1].eph2pos(now + dt.timedelta(seconds=x_hat[3])) for s in sats])
         XYZs = np.array([s[1].eph2pos(now + x_hat[3]) for s in sats])
 
-    # if len(init_pos):
     phi, t, h = ecef_to_lat_lon_alt(xyzt, deg=False)
     R = np.matrix([[-sin(phi) * cos(t), -sin(phi) * sin(t), cos(phi)],
                    [-sin(t), cos(t), 0],
                    [cos(phi) * cos(t), cos(phi) * sin(t), sin(phi)]])
     Q = (AT * A).I
-    S_T = R * Q[0:3, 0:3] * R.transpose()
-    GDOP = sqrt(sum(S_T.diagonal().getA()[0]) + Q[3, 3])
+    # S_T = R * Q[0:3, 0:3] * R.transpose()
+    # GDOP = sqrt(sum(S_T.diagonal().getA()[0]) + Q[3, 3])
     # print "GDOP = %.3f, VDOP = %.3f" % (GDOP,sqrt(S_T[2,2]))
     return xyzt[:3]
-    # else:
-        # errors = {s[0]:(l - A*x_hat_matrix).tolist()[i][0] for i,s in enumerate(sats)}
-        # print errors
-        # print "try with initial position",xyzt,
-        # return least_squares(obs, navs, xyzt)
 
 
 if __name__ == "__main__":

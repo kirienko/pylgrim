@@ -2,7 +2,6 @@
 # ! encoding: UTF8
 __author__ = 'kirienko'
 
-import datetime as dt
 import re
 from gtime import GTime
 from math import ceil
@@ -94,14 +93,3 @@ class ObsGPS:
         else:
             return None
 
-
-if __name__ == "__main__":
-    with open('../test_data/test.o') as fd:
-    # with open('../test_data/iter_0/gope0010.16o.filtered') as fd:
-        data = fd.readlines()
-
-    header_end_marker = "END OF HEADER"
-    for j, d in enumerate(data):
-        if header_end_marker in d:
-            header_end = j
-    header, body = data[:header_end], data[header_end + 1:]

@@ -59,8 +59,6 @@ class IonexMap:
         lon0, lon1 = self.lons[lon_idxs[0]], self.lons[lon_idxs[1]]
         dlat = lat1 - lat0
         dlon = lon1 - lon0
-        # print "lat0 =", lat0, " lat1 =", lat1, " dlat =", dlat
-        # print "lon0 =", lon0, " lon1 =", lon1, " dlat =", dlon
         p = float(pos[0] - lat0) / dlat
         q = float(pos[1] - lon0) / dlon
         (E00, E10), (E01, E11) = self.grid_TEC[lat_idxs[0]:lat_idxs[1] + 1, lon_idxs[0]:lon_idxs[1] + 1]
@@ -96,7 +94,6 @@ def parse_ionex(ionex_file):
                           "is not equal to the number of maps in the body.")
     if len(map_start_idx) != len(map_end_idx):
         raise IndexError("Starts end ends numbers are not equal.")
-    # print map_start_idx, len(map_start_idx)
     map_dates = []
     for i in xrange(maps_count):
         date = map(int, body[map_start_idx[i] + 1].split()[:6])

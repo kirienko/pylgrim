@@ -81,7 +81,6 @@ def satellites(pos, sat_pos, sat_names=''):
         X1, Y1, Z1 = [],[],[]
         for i in xrange(num):
             vec = np.array([X[i],Y[i],Z[i]])
-            # XYZ = B * C * D * vec
             XYZ = C * D * vec
             X1.extend(XYZ[0].tolist())
             Y1.extend(XYZ[1].tolist())

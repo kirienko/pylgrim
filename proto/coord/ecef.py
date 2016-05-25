@@ -1,13 +1,9 @@
 #! encoding: UTF8
 import numpy as np
-# import gpstk as G
 from math import atan2
 from numpy.linalg import norm
 from numpy.matrixlib import matrix
 from numpy.core.umath import sqrt, cos, sin, arcsin, isnan, degrees
-
-
-# from proto.rover_position import xyz_string, lla_string
 
 
 def lat_lon_alt_to_ecef_xyz(R):
@@ -154,16 +150,6 @@ def ecef_to_spherical(R, deg=True):
         out = np.array([phi, theta, h])
     return out
 
-def ecef_to_geodetic(R):
-    """
-    ECEF to Geodetic using gpstk. Degrees only
-    """
-    p = G.Position(*R)
-    pos = np.array(G.Position.convertCartesianToGeodetic(p, 6378137.0, 0.006694380004260814))
-    if pos[0] > 180: pos[0] = pos[0] - 360
-    if pos[1] > 180: pos[1] = pos[1] - 360
-    return pos
-
 
 def sat_in_enu(R_u, R_sat):
     """
@@ -175,9 +161,7 @@ def sat_in_enu(R_u, R_sat):
     """
     if isinstance(R_sat, list):  R_sat = np.array(R_sat)
     R = R_sat - R_u
-    # phi, theta, h = ecef_to_lat_lon_alt(R_u, deg=False)
     phi_theta_h = ecef_to_lat_lon_alt(R_u, deg=False)
-    # phi_theta_h = ecef_to_spherical(R_u, deg=False)
     # coordinate transformation matrix from ECEF to ENU:
     sin_p, sin_t = map(sin, phi_theta_h[:2])
     cos_p, cos_t = map(cos, phi_theta_h[:2])
@@ -190,7 +174,6 @@ def sat_in_enu(R_u, R_sat):
     #                 [R_u[0] * sin_p * cos_t - R_u[1] * sin_p * sin_t - R_u[2] * cos_p],
     #                 [-R_u[0] * cos_p * cos_t - R_u[1] * cos_p * sin_t - R_u[2] * sin_t]])
 
-    # X_enu = C_ecef_to_enu * R_sat.reshape((3, 1))# + S_enu
     X_enu = C_ecef_to_enu * R.reshape((3, 1))# + S_enu
     # return normalized vector:
     return (X_enu / norm(X_enu)).flatten().getA()[0]

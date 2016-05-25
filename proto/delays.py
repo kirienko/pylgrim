@@ -21,15 +21,10 @@ def saast(pos, el, humi=0.75, temp0=15.0):
     :param temp0:   temperature (Celsius)
     :return:        tropospheric delay (m)
     """
-    # temp0 = 15.0  # temparature at sea level
-    # double hgt,pres,temp,e,z,trph,trpw;
-
-    # if (pos[2]<-100.0||1E4<pos[2]||el[1]<=0) return 0.0;
     if pos[2] < -100.0 or 1E4 < pos[2] or el <= 0:
         return 0.0
 
     # /* standard atmosphere */
-    # hgt=pos[2]<0.0?0.0:pos[2];
     hgt = 0.0 if pos[2] < 0.0 else pos[2]
 
     pres = 1013.25 * pow(1.0 - 2.2557E-5 * hgt, 5.2568)

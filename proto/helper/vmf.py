@@ -118,7 +118,6 @@ def find_VMF_coeffs(ah_file, aw_file, coords):
             values = array([])
             for line in data[1:]:
                 values = append(values, array([float(x) for x in line.strip().split()]))
-        # print len(values)
         header = map(float, data[0].split())
         lat_range = header[0], header[1]
         lon_range = header[2], header[3]
@@ -165,7 +164,6 @@ def vmf(pos, time, elev, coeffs):
     ep = datetime(2000, 1, 1, 12, 0, 0)
     mjd = 51544.5 + (time - ep).total_seconds() / 86400.0
     doy = mjd - 44239. - 28
-    # print "mjd =", mjd, "\tdoy =", doy
     bh = .0029
     c0h = .062
     if pos[0] < 0.:

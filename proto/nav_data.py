@@ -219,7 +219,6 @@ class NavGLO(Nav):
         deq_a = 1.5 * self.J2_GLO * self.MU_GLO * self.RE_GLO**2 / r2 / r3  # /* 3/2*J2*mu*Ae^2/r^5 */
         deq_b = 5.0 * x[2] * x[2] / r2  # /* 5*z^2/r^2 */
         deq_c = -self.MU_GLO / r3 - deq_a * (1.0 - deq_b)  # /* -mu/r^3-a(1-b) */
-        # xdot = np.array()
         xdot0_2 = x[3:6]
         xdot_3 = (deq_c + omg2) * x[0] + 2.0 * self.OMGE_GLO * x[4] + self.acc[0]
         xdot_4 = (deq_c + omg2) * x[1] - 2.0 * self.OMGE_GLO * x[3] + self.acc[1]
@@ -241,14 +240,12 @@ class NavGLO(Nav):
         # glo_xyzt = np.append(r_0, -TauN + GammaN * t)  # coordinates in ECEF and clock bias
 
         x = np.append(self.r, self.v)   # x = (\vec{r},\vec{v})
-        # print "x =", x
         tt = np.sign(t) * TSTEP
         i = 0
         # print "time = ", t, "\tt_0 =", self.t_0, "\tt_k =", self.tk, "\tdate =", self.date, "\ttt =", tt
         while abs(t) > 1E-9:
             if abs(t) < TSTEP:
                 tt = t
-            # globit(tt, x)
             k1 = self.deq(x)
             w = x + k1 * tt / 2
             k2 = self.deq(w)
@@ -259,8 +256,6 @@ class NavGLO(Nav):
             x += (k1 + 2*k2 + 2*k3 + k4) * tt/6
             t -= tt
             i += 1
-            # print "i = %d, t = %f," % (i, t), "\tx =",x[:3]
-        # print "res =", x[:3]
         # return np.append(x[:3], -self.TauN + self.GammaN * t)  # coordinates in ECEF and clock bias
         return x[:3]        # coordinates in ECEF and clock bias
 

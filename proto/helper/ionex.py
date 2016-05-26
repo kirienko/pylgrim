@@ -127,15 +127,3 @@ def parse_ionex(ionex_file):
             raise IndexError("No IONEX map for this time: %s" % str(time))
 
     return interpolate_maps
-
-
-if __name__ == "__main__":
-    from os.path import expanduser
-
-    # ionex = expanduser("~") + "/code/pylgrim/test_data/iter_0/igsg0010.16i"
-    ionex = expanduser("~") + "/code/pylgrim/test_data/igsg3100.15i"
-    M = parse_ionex(ionex)
-    dttimes = [dt.datetime(2015, 11, 6, x, 00) for x in range(24)]
-    p = (60.1, 30.1)
-    for tt in dttimes:
-        print tt.time(), M(p, tt)

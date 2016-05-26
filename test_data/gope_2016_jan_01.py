@@ -1,5 +1,10 @@
 #! encoding: utf8
 
+"""
+Here we test the absolute accuracy of our software in static measurements.
+GOPE = geodetic observatory Pecný: http://www.pecny.cz/gop/index.php/gnss/observations/gope
+"""
+
 from proto.coord.ecef import ecef_to_lat_lon_alt as ecef2lla
 from proto.helper.vmf import find_VMF_coeffs
 from proto.parse_rinex import parse_rinex, parse_sp3
@@ -16,7 +21,7 @@ if __name__ == '__main__':
 
     zero_epoch = obs[2]
     print zero_epoch.date
-    a_priori_ecef = [3979316.4389, 1050312.2534, 4857066.9036]  # in meters
+    a_priori_ecef = [3979316.4389, 1050312.2534, 4857066.9036]  # GOPE coordinates in meters
     coords = ecef2lla(a_priori_ecef)
     print "A priori coordinates:", coords
     print "A priori ECEF coords:", a_priori_ecef

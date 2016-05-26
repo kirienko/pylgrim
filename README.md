@@ -4,7 +4,6 @@ Playground project. Just to understand how GNSS works.
 
 Project Contents:
 -----------------
-* docs/      -- manuals
 * proto/     -- prototype of software receiver (mostly `python` + `numpy`)
     + coord/ -- tools for coordinate transition
     + helper/ -- misc helper functions
@@ -44,4 +43,4 @@ Maybe some day:
 --------------
 * GPS and GLONASS with 10 meter accuracy
 * moving rover
-* phase ambiguity (stay tuned!)
+* phase ambiguity

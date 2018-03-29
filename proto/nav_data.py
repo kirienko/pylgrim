@@ -5,7 +5,7 @@ import datetime as dt
 import numpy as np
 from datetime import datetime
 from math import sqrt, sin, cos, atan2
-from numpy.numarray import zeros
+from numpy import zeros
 from gtime import GTime
 
 # Origin of GPS time:

@@ -24,9 +24,9 @@ class TestGTime(TestCase):
         t.append(self.z + 50.55)                        # 2000-01-01 00:01:01.000000000
         t.append(self.z + 3650.55)                      # 2000-01-01 01:01:01.000000000
         t.append(self.z + 3650.55 + 60 * 60 * 24 * 2)   # 2000-01-03 01:01:01.000000000
-        self.assertSequenceEqual(map(lambda x: x.std.year, t), [2000] * len(t))
-        self.assertSequenceEqual(map(lambda x: x.std.month, t), [1] * len(t))
-        self.assertSequenceEqual(map(lambda x: x.std.day, t), [1, 1, 1, 3])
-        self.assertSequenceEqual(map(lambda x: x.std.hour, t), [0, 0, 1, 1])
-        self.assertSequenceEqual(map(lambda x: x.std.minute, t), [0, 1, 1, 1])
+        self.assertSequenceEqual(list(map(lambda x: x.std.year, t)), [2000] * len(t))
+        self.assertSequenceEqual(list(map(lambda x: x.std.month, t)), [1] * len(t))
+        self.assertSequenceEqual(list(map(lambda x: x.std.day, t)), [1, 1, 1, 3])
+        self.assertSequenceEqual(list(map(lambda x: x.std.hour, t)), [0, 0, 1, 1])
+        self.assertSequenceEqual(list(map(lambda x: x.std.minute, t)), [0, 1, 1, 1])
         self.assertIsInstance(t[0].sec, float)

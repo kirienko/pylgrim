@@ -8,7 +8,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 
 
 m, n = 5, 3
-print "Initital size of matrix B: %d × %d" % (m, n)
+print("Initital size of matrix B: %d × %d" % (m, n))
 # B = rand(m, n)
 B = array([[-1.38483, 0.53704, 0.14925],        # ans:
            [1.05734, 0.61432, 0.94116],         # v1    v2
@@ -60,7 +60,7 @@ def pprint_two_matrices(M1, M2, dtype='float', name1='', name2=''):
     """
     if len(M1) != len(M2):
         if len(M1.reshape(1, max(M1.shape))) != len(M2.reshape(1, max(M2.shape))):
-            print "Matrices are of different length: %d and %d" % (len(M1), len(M2))
+            print("Matrices are of different length: %d and %d" % (len(M1), len(M2)))
             return
         else:
             _M1 = M1.reshape(1, max(M1.shape)).astype(dtype)
@@ -72,11 +72,11 @@ def pprint_two_matrices(M1, M2, dtype='float', name1='', name2=''):
     max_elem_len = min(8, max(map(len_str, M1.flatten()) + map(len_str, M2.flatten())))
     width = (len(_M1[0])) * (max_elem_len + 3)
     eq = "=" if (_M1 == _M2).all() else "≠"
-    print
+    print()
     if name1 or name2:
-        print "{:^{}}".format(name1, width) + eq + "{:^{}}".format(name2, width)
+        print("{:^{}}".format(name1, width) + eq + "{:^{}}".format(name2, width))
     for j in xrange(len_M):
         q1, q2 = map(str, _M1[j]), map(str, _M2[j])
         str1 = " ".join(map(lambda x: '{:>{}.{}}'.format(x, max_elem_len + 2, max_elem_len), q1))
         str2 = " ".join(map(lambda x: '{:>{}.{}}'.format(x, max_elem_len + 2, max_elem_len), q2))
-        print str1 + ' | ' + str2
+        print(str1 + ' | ' + str2)

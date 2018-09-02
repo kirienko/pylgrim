@@ -35,7 +35,7 @@ class GTime(object):
             summed = GTime(*s_std)
             return summed
         else:
-            print "Type of addend:", type(other)
+            print("Type of addend: " + str(type(other)))
             raise NotImplementedError
 
     def __str__(self):  # I'm ugly and I know it

@@ -34,7 +34,7 @@ class TestNavGPS(TestCase):
     def test_eph2pos(self):
         XYZ = self.n.eph2pos(self.n.epoch + self.t) / 1000
         dist = sqrt(sum(map(lambda x, y: (x - y) ** 2, XYZ, self.right_pos)))
-        print "%.2f m <-- distance between exact and calculated positions" % (dist * 1000)
+        print("%.2f m <-- distance between exact and calculated positions" % (dist * 1000))
         assert_allclose(XYZ, self.right_pos, rtol=1e-6)
         assert_allclose(dist, 0., atol=1e-2)
 
@@ -49,7 +49,7 @@ class TestNavGLO(TestCase):
         navigations = parse_rinex(nav_file)
         sats = [k for k, v in navigations.items() if len(v) > 1]   # list of possible satellites
         sat = choice(sats)  # choose one satellite randomly
-        print "PRN:",sat
+        print("PRN: " + sat)
         self.navs = navigations[sat]
         # self.navs = navigations['R19']
         # for j, n in enumerate(self.navs):
@@ -67,13 +67,13 @@ class TestNavGLO(TestCase):
 
     def test_eph2pos(self):
         dt = self.middle(self.navs)
-        print "dt =", dt
+        print("dt =", dt)
         num = 0
         d1 = self.navs[num].eph2pos(dt[num])
         d2 = self.navs[num+1].eph2pos(dt[num])
-        print "at", dt[num], " d1 =", d1, self.navs[num].date
-        print "at", dt[num], " d2 =", d2, self.navs[num+1].date
-        assert_allclose(d1, d2, rtol=1e-6) # FIXME: usually it fails
+        print("at {} d1 = {}".format(dt[num], d1, self.navs[num].date))
+        print("at {} d2 = {}".format(dt[num], d2, self.navs[num+1].date))
+        assert_allclose(d1, d2, rtol=1e-6)  # FIXME: usually it fails
 
 
 class TestDef_leap(TestCase):

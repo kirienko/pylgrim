@@ -9,7 +9,7 @@ from proto.helper.vmf import find_VMF_coeffs, vmf
 
 class TestVmf(TestCase):
     def setUp(self):
-        self.boehm_time = datetime(2008, 03, 19, 0, 0)
+        self.boehm_time = datetime(2008, 3, 19, 0, 0)
         self.boehm_pos_deg = (46, 15, 1000)
         self.boehm_pos_rad = (deg2rad(46), deg2rad(15), 1000)
         self.ahf = "../../test_data/ah08079.h00"   # ah = 0.00121328

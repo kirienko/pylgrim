@@ -41,6 +41,7 @@ Dependencies:
 
 Maybe some day:
 --------------
+* `python3` -- see the branch of the same name 
 * GPS and GLONASS with 10 meter accuracy
 * moving rover
 * phase ambiguity

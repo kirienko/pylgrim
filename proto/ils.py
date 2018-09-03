@@ -10,8 +10,11 @@ See:    Chang, Xiao-Wen, and Tianyang Zhou.
 """
 
 from __future__ import division
+from __future__ import print_function
 
-from numpy import arange, append, array, delete, dot, inf, ones, sign, sqrt, triu, zeros
+from builtins import range
+from numpy import (arange, append, array, delete, dot, inf, ones, round, sign,
+                   sqrt, triu, zeros)
 from numpy.linalg import lstsq, norm, qr
 from numpy.linalg import matrix_rank as rank
 
@@ -42,10 +45,10 @@ def qrmcp(B, y):
     piv = arange(n)
 
     # Compute the 2-norm squared of each column of B
-    for j in xrange(n):
+    for j in range(n):
         colnormB[0][j] = norm(B[:, j]) ** 2
 
-    for k in xrange(n):
+    for k in range(n):
         # Find the column with minimum 2-norm in B(k+1:m,k+1:n)
         tmp = colnormB[0, k:] - colnormB[1, k:]
         i = tmp.argmin()
@@ -105,7 +108,7 @@ def reduction(B, y):
 
     # Obtain the permutation matrix Z
     Z = zeros((n, n), dtype=int)
-    for j in xrange(n):
+    for j in range(n):
         Z[piv[j]][j] = 1
     # Perform partial LLL reduction on R
     k = 1
@@ -121,7 +124,7 @@ def reduction(B, y):
                 R[:k-1, k] -= zeta * R[:k-1, k-1]
                 Z[:, k] -= zeta * Z[:, k-1]
                 # Perform size reductions on R(:k-2,k)
-                for i in xrange(k - 2, -1, -1):
+                for i in range(k - 2, -1, -1):
                     zeta = int(round(R[i, k] / R[i, i]))
                     if zeta != 0:
                         R[:i+1, k] = R[:i+1, k] - zeta * R[:i+1, i]
@@ -177,7 +180,7 @@ def search(R, y, p=1):
     # --> prsd(k)=norm(y(k+1:n)-R(k+1:n,k+1:n)z(k+1:n))^2
     S = zeros((n, n + 1))   # S(:,k) = R(:,k:n)*z(k:n), k=1:n
     z_hat = zeros((n, p), dtype=int)   # the p candidate solutions (or points)
-    rsd = zeros((p, 1))     # squared residual norms of the p candidate solutions
+    rsd = zeros((p, 1))   # squared residual norms of the p candidate solutions
 
     beta = inf  # the initial ellipsoid bound
     ncand = 0   # the initial number of candidate solutions
@@ -246,24 +249,26 @@ def ils(B, y, p=1):
 
 
 def mils(A, B, y, p=1):
-    # x_hat,z_hat = mils(A,B,y,p) produces p pairs of optimal solutions to
-    #               the mixed integer least squares problem min_{x,z}||y-Ax-Bz||, 
-    #               where x and z are real and integer vectors, respectively.
-    #
-    # Input arguments:
-    #    A - m by k real matrix
-    #    B - m by n real matrix
-    #          [A,B] has full column rank
-    #    y - m-dimensional real vector
-    #    p - the number of optimal solutions
-    #
-    # Output arguments:
-    #    x_hat - k by p real matrix
-    #    z_hat - n by p integer matrix (in double precision). 
-    #           The pair {x_hat(:,j),z_hat(:,j)} is the j-th optimal solution
-    #           i.e., its residual is the j-th smallest, so
-    #           ||y-A*x_hat(:,1)-B*z_hat(:,1)||<=...<=||y-A*x_hat(:,p)-B*z_hat(:,p)||
+    """
+    x_hat,z_hat = mils(A,B,y,p) produces p pairs of optimal solutions to
+                  the mixed integer least squares problem min_{x,z}||y-Ax-Bz||,
+                  where x and z are real and integer vectors, respectively.
 
+    Input arguments:
+       A - m by k real matrix
+       B - m by n real matrix
+             [A,B] has full column rank
+       y - m-dimensional real vector
+       p - the number of optimal solutions
+
+    Output arguments:
+       x_hat - k by p real matrix
+       z_hat - n by p integer matrix (in double precision).
+             The pair {x_hat(:,j),z_hat(:,j)} is the j-th optimal solution
+             i.e., its residual is the j-th smallest, so
+             ||y-A*x_hat(:,1)-B*z_hat(:,1)|| <= ...
+                                             < =||y-A*x_hat(:,p)-B*z_hat(:,p)||
+    """
     m, k = A.shape
     m2, n = B.shape
     if m != m2 or m != len(y) or len(y[1]) != 1:
@@ -290,24 +295,23 @@ if __name__ == "__main__":
     from numpy.random import rand
 
     m, n = 5, 3
-    print "Initital size of matrix B: %d × %d" % (m, n)
+    print("Initital size of matrix B: %d × %d" % (m, n))
     B = rand(m, n)
-    print "B =\n", B
+    print("B =\n", B)
 
     z_true = array([1, -2, 3]).reshape(3, 1)  # column vector
     y = dot(B, z_true) + 1e-3 * rand(m, 1)
 
-    print "y' =", y.T
+    print("y' =", y.T)
 
     p = 2
     Z = ils(B.copy(), y.copy(), p)
 
     ok = "OK" if (Z.T[0] == z_true.T).all() else "WRONG!"
-    print "\n=== Solutions: %s ===" % ok
-    print Z
+    print("\n=== Solutions: %s ===" % ok)
+    print(Z)
 
-
-    print "MILS:"
+    print("MILS:")
     m = 7
     k = 2
     n = 3
@@ -316,8 +320,8 @@ if __name__ == "__main__":
     B = rand(m, n)
     y = rand(m, 1)
 
-    print "Three pairs of optimal least squares solutions"
+    print("Three pairs of optimal least squares solutions")
     X, Z = mils(A, B, y, p)
 
-    print X
-    print Z
+    print(X)
+    print(Z)

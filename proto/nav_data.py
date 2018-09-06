@@ -1,12 +1,19 @@
 #!/usr/bin/python
 # ! encoding: UTF8
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import map
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import datetime as dt
 import numpy as np
 from datetime import datetime
 from math import sqrt, sin, cos, atan2
 from numpy import zeros
-from gtime import GTime
+from .gtime import GTime
 
 # Origin of GPS time:
 # ori = GTime(year=1980, month=1, day=6,
@@ -21,7 +28,7 @@ Prototype of RINEX navigation file parser
 
 mu = 3.986005E14  # WGS84 value of Earth’s universal gravitational parameter [m/s]
 c = 2.99792458E8  # GPS value for speed of light [m³/s²]
-Omega_dot_e = 7.2921151467 / 1E5  # WGS84 value of Earth’s rotation rate [rad/s]
+Omega_dot_e = old_div(7.2921151467, 1E5)  # WGS84 value of Earth’s rotation rate [rad/s]
 
 
 class Nav(object):
@@ -48,12 +55,12 @@ class Nav(object):
         # Time of the observation
         if int(self.raw_data[1]) < 2000: self.raw_data[1] = '20' + self.raw_data[1]
         sec_msec = float(self.raw_data[6])
-        self.date = GTime(*(map(int, self.raw_data[1:6]) + [sec_msec]))  # t_oc
+        self.date = GTime(*(list(map(int, self.raw_data[1:6])) + [sec_msec]))  # t_oc
         if self.leap is None:
             self.leap = def_leap(self.date)
 
         try:
-            self.eph = map(float, self.raw_data[10:27])  # broadcast ephemeris
+            self.eph = list(map(float, self.raw_data[10:27]))  # broadcast ephemeris
             self.week = int(float(self.raw_data[28]))  # GPS week
             epoch = ori + dt.timedelta(days=self.week * 7) #it's a date, i.e. hours = mins = sec = 0
             self.epoch = GTime(*(epoch.timetuple()[:5]))
@@ -100,12 +107,12 @@ class NavGPS(Nav):
         delta_n = self.eph[2]  # Δn - Mean motion correction [rad/s]
         e = self.eph[5]  # Eccentricity
         sqrt_a = self.eph[7]  # Square root of semimajor axis
-        n = sqrt(mu / sqrt_a ** 6) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
+        n = sqrt(old_div(mu, sqrt_a ** 6)) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
         M_0 = self.eph[3]  # M₀ - Mean anomaly (at time t_oe )
         M_k = M_0 + n * t_k  # print " 4) Mₖ  = M₀  + (n)(tₖ) = %f " % M_k
         E_k = M_k
-        for j in xrange(5):
-            E_k -= (E_k - e * sin(E_k) - M_k) / (1 - e * cos(E_k))
+        for j in range(5):
+            E_k -= old_div((E_k - e * sin(E_k) - M_k), (1 - e * cos(E_k)))
         # print " 5) Mₖ  = Eₖ  + e sin(Eₖ) = %f " % E_k
         return E_k
 
@@ -188,7 +195,7 @@ class NavGPS(Nav):
 class NavGLO(Nav):
     def __init__(self, data, header):
         Nav.__init__(self, data, header)
-        self.TauN, self.GammaN, self.tk = map(float, self.raw_data[7:10])
+        self.TauN, self.GammaN, self.tk = list(map(float, self.raw_data[7:10]))
         y_0, m_0, d_0 = self.date.std.timetuple()[:3]
         self.t_0 = GTime(year=y_0, month=m_0, day=d_0, hour=0, minute=0)
         self.r = np.array([self.eph[0], self.eph[4], self.eph[8]]) * 1e3  # R₀ = (X₀, Y₀, Z₀)
@@ -218,7 +225,7 @@ class NavGLO(Nav):
 
         deq_a = 1.5 * self.J2_GLO * self.MU_GLO * self.RE_GLO**2 / r2 / r3  # /* 3/2*J2*mu*Ae^2/r^5 */
         deq_b = 5.0 * x[2] * x[2] / r2  # /* 5*z^2/r^2 */
-        deq_c = -self.MU_GLO / r3 - deq_a * (1.0 - deq_b)  # /* -mu/r^3-a(1-b) */
+        deq_c = old_div(-self.MU_GLO, r3) - deq_a * (1.0 - deq_b)  # /* -mu/r^3-a(1-b) */
         xdot0_2 = x[3:6]
         xdot_3 = (deq_c + omg2) * x[0] + 2.0 * self.OMGE_GLO * x[4] + self.acc[0]
         xdot_4 = (deq_c + omg2) * x[1] - 2.0 * self.OMGE_GLO * x[3] + self.acc[1]
@@ -235,7 +242,7 @@ class NavGLO(Nav):
         t = (time-self.t_0) - self.tk
 
         if t > 1800:
-            print "Warning: probably wrong interpolation period"
+            print("Warning: probably wrong interpolation period")
 
         # glo_xyzt = np.append(r_0, -TauN + GammaN * t)  # coordinates in ECEF and clock bias
 
@@ -264,11 +271,11 @@ class NavGLO(Nav):
         return -(-self.TauN + self.GammaN * t)
 
 
-class PreciseNav:
+class PreciseNav(object):
     def __init__(self, date, sat_position):
         self.date = date
         self.t_oe = self.date
-        self.xyzt = np.array(map(float, sat_position))  # [km, km, km, mcs]
+        self.xyzt = np.array(list(map(float, sat_position)))  # [km, km, km, mcs]
 
     def eph2pos(self, time=0):
         """
@@ -282,7 +289,7 @@ class PreciseNav:
         :param time: unnecessary parameter
         :return: satellite clock bias [sec]
         """
-        return self.xyzt[3] / 1e6
+        return old_div(self.xyzt[3], 1e6)
 
 
 def def_leap(date):
@@ -299,8 +306,8 @@ def def_leap(date):
                  (1994, 6, 30), (1995, 12, 31), (1997, 6, 30),
                  (1998, 12, 31), (2005, 12, 31), (2008, 12, 31),
                  (2012, 6, 30), (2015, 6, 30)]
-    leap_dates = map(lambda x: datetime(x[0], x[1], x[2], 23, 59, 59), leap_list)
-    for j in xrange(len(leap_dates[:-1])):
+    leap_dates = [datetime(x[0], x[1], x[2], 23, 59, 59) for x in leap_list]
+    for j in range(len(leap_dates[:-1])):
         if leap_dates[j] < date < leap_dates[j + 1]:
             return j + 1
     return len(leap_dates)

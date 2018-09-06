@@ -14,7 +14,8 @@ class GTime(object):
                  hour=None,
                  minute=None,
                  second=0.0):
-        self.std = dt.datetime(year=year, month=month, day=day, hour=hour, minute=minute)
+        self.std = dt.datetime(year=year, month=month, day=day, hour=hour,
+                               minute=minute)
         self.sec = float(second)
 
     def __sub__(self, other):
@@ -37,6 +38,14 @@ class GTime(object):
         else:
             print("Type of addend: " + str(type(other)))
             raise NotImplementedError
+
+    def __lt__(self, other):
+        if self.std < other.std:
+            return True
+        elif self.std > other.std:
+            return False
+        else:
+            return self.sec < other.sec
 
     def __str__(self):  # I'm ugly and I know it
         return str(self.std)[:-2] + "%02d" % int(self.sec) + ("%.9f" % (self.sec - int(self.sec)))[1:]

@@ -3,7 +3,7 @@
 __author__ = 'kirienko'
 
 import re
-from gtime import GTime
+from .gtime import GTime
 from math import ceil
 
 c = 299792428  # speed of light

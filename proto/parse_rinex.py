@@ -5,7 +5,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 from builtins import map
 from builtins import range
-from past.utils import old_div
 import re
 from collections import defaultdict
 from math import ceil
@@ -68,11 +67,11 @@ def parse_rinex(path):
         if satel_type == 'gps':
             if len(body) % 8 != 0:
                 print("Warning: wrong length of NAV file")
-            nav_list = [NavGPS(body[i * 8:(i + 1) * 8], (LEAP, A0, A1)) for i in range(old_div(len(body), 8))]
+            nav_list = [NavGPS(body[i * 8:(i + 1) * 8], (LEAP, A0, A1)) for i in range(len(body) // 8)]
         elif satel_type == 'glo':
             if len(body) % 4 != 0:
                 print("Warning: wrong length of NAV file")
-            nav_list = [NavGLO(body[i * 4:(i + 1) * 4], (LEAP, A0, A1)) for i in range(old_div(len(body), 4))]
+            nav_list = [NavGLO(body[i * 4:(i + 1) * 4], (LEAP, A0, A1)) for i in range(len(body) // 4)]
         nav_dict = defaultdict(list)
         for obj in nav_list:
             nav_dict[sat_prefix + "%02d" % obj.PRN_number] += [obj]
@@ -81,7 +80,7 @@ def parse_rinex(path):
     elif rinex_type == 'obs':
         obs_types = get_header_line(header, "TYPES OF OBSERV").split()
         number_of_obs_types = int(obs_types[0])
-        lpo = int(ceil(old_div(float(number_of_obs_types), 5)))  # lines per one observation
+        lpo = int(ceil(float(number_of_obs_types) / 5))  # lines per one observation
         obs_types = obs_types[1:1 + number_of_obs_types]
 
         observations = []

@@ -7,7 +7,6 @@ from __future__ import absolute_import
 from builtins import map
 from builtins import range
 from builtins import object
-from past.utils import old_div
 import datetime as dt
 import numpy as np
 from datetime import datetime
@@ -28,7 +27,7 @@ Prototype of RINEX navigation file parser
 
 mu = 3.986005E14  # WGS84 value of Earth’s universal gravitational parameter [m/s]
 c = 2.99792458E8  # GPS value for speed of light [m³/s²]
-Omega_dot_e = old_div(7.2921151467, 1E5)  # WGS84 value of Earth’s rotation rate [rad/s]
+Omega_dot_e = 7.2921151467 / 1E5  # WGS84 value of Earth’s rotation rate [rad/s]
 
 
 class Nav(object):
@@ -107,12 +106,12 @@ class NavGPS(Nav):
         delta_n = self.eph[2]  # Δn - Mean motion correction [rad/s]
         e = self.eph[5]  # Eccentricity
         sqrt_a = self.eph[7]  # Square root of semimajor axis
-        n = sqrt(old_div(mu, sqrt_a ** 6)) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
+        n = sqrt(mu / sqrt_a ** 6) + delta_n  # print " 2) n = sqrt(μ/a³) + Δn = %f [rad/s]" % n
         M_0 = self.eph[3]  # M₀ - Mean anomaly (at time t_oe )
         M_k = M_0 + n * t_k  # print " 4) Mₖ  = M₀  + (n)(tₖ) = %f " % M_k
         E_k = M_k
         for j in range(5):
-            E_k -= old_div((E_k - e * sin(E_k) - M_k), (1 - e * cos(E_k)))
+            E_k -= (E_k - e * sin(E_k) - M_k) / (1 - e * cos(E_k))
         # print " 5) Mₖ  = Eₖ  + e sin(Eₖ) = %f " % E_k
         return E_k
 
@@ -225,7 +224,7 @@ class NavGLO(Nav):
 
         deq_a = 1.5 * self.J2_GLO * self.MU_GLO * self.RE_GLO**2 / r2 / r3  # /* 3/2*J2*mu*Ae^2/r^5 */
         deq_b = 5.0 * x[2] * x[2] / r2  # /* 5*z^2/r^2 */
-        deq_c = old_div(-self.MU_GLO, r3) - deq_a * (1.0 - deq_b)  # /* -mu/r^3-a(1-b) */
+        deq_c = -self.MU_GLO / r3 - deq_a * (1.0 - deq_b)  # /* -mu/r^3-a(1-b) */
         xdot0_2 = x[3:6]
         xdot_3 = (deq_c + omg2) * x[0] + 2.0 * self.OMGE_GLO * x[4] + self.acc[0]
         xdot_4 = (deq_c + omg2) * x[1] - 2.0 * self.OMGE_GLO * x[3] + self.acc[1]
@@ -289,7 +288,7 @@ class PreciseNav(object):
         :param time: unnecessary parameter
         :return: satellite clock bias [sec]
         """
-        return old_div(self.xyzt[3], 1e6)
+        return self.xyzt[3] / 1e6
 
 
 def def_leap(date):

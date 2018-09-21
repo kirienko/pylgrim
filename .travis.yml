@@ -1,6 +1,5 @@
 language: python
 python:
-  - "2.7"
   - "3.4"
 #  - "pypy"  # PyPy2 2.5.0
 #  - "pypy3" # Pypy3 2.4.0
@@ -9,7 +8,7 @@ python:
 # command to install dependencies
 install:
   - pip install -r requirements.txt
-  - pip install .
+#  - pip install .
 
 # command to run tests
 script:

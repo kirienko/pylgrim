@@ -109,7 +109,7 @@ def find_VMF_coeffs(ah_file, aw_file, coords):
     :return:
     """
     if ah_file.replace("ah", '') != aw_file.replace('aw', ''):
-        print "WARNING: file names do not match:", ah_file, aw_file
+        print("WARNING: file names do not match: " + ah_file + ", " + aw_file)
     crds = coords[:]    # just a copy
     coeffs = []
     for f in (ah_file, aw_file):
@@ -118,7 +118,7 @@ def find_VMF_coeffs(ah_file, aw_file, coords):
             values = array([])
             for line in data[1:]:
                 values = append(values, array([float(x) for x in line.strip().split()]))
-        header = map(float, data[0].split())
+        header = list(map(float, data[0].split()))
         lat_range = header[0], header[1]
         lon_range = header[2], header[3]
         grid = header[4], header[5]
@@ -127,12 +127,14 @@ def find_VMF_coeffs(ah_file, aw_file, coords):
         values = values.reshape((lat_len, lon_len))
 
         if abs(lat_range[0] - lat_range[1]) < 180 or \
-            abs(lon_range[0] - lon_range[1]) < 360:
-                print "WARNING: ionospheric map does not cover all the Earth!"
+                abs(lon_range[0] - lon_range[1]) < 360:
+                print("WARNING: ionospheric map does not cover all the Earth!")
         while crds[1] < 0:
             crds[1] += 360
-        grid_coords = [round_to_grid(x, grid[j]) for j, x in enumerate(crds[:2])]
-        coeffs += [values[int((lat_range[0] - grid_coords[0]) / grid[0])][int(grid_coords[1] / grid[1])]/10E7]
+        grid_coords = [round_to_grid(x, grid[j]) for j, x in
+                       enumerate(crds[:2])]
+        coeffs += [values[int((lat_range[0] - grid_coords[0]) / grid[0])]
+                   [int(grid_coords[1] / grid[1])]/10E7]
 
     return tuple(coeffs)
 

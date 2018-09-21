@@ -103,9 +103,9 @@ def parse_sp3(path):
     :param path: path to *.sp3-file
     :return: array of Nav-objects
     """
+    print("\nParsing %s:" % path)
     with open(path) as fd:
         data = fd.readlines()
-    print("\nParsing %s:" % path)
     nav_dict = defaultdict(list)
     for j, d in enumerate(data):
         if d[0] == '*':

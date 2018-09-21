@@ -1,4 +1,5 @@
 #! encoding: utf8
+from __future__ import absolute_import
 from unittest import TestCase
 from numpy.testing import assert_allclose
 from proto.parse_rinex import parse_rinex, parse_sp3
@@ -15,7 +16,8 @@ class TestLeast_squares(TestCase):
     def setUp(self):
         self.apriori_coords = [4433070.0, 362070.0, 4556010.0]
         self.observations = parse_rinex(td_path+'sjdv0100.02o')
-        self.sp3s = parse_sp3(td_path+'igs11484.sp3')
+        # self.sp3s = parse_sp3(td_path+'igs11484.sp3')
+        self.sp3s = parse_sp3('../../test_data/igs11484.sp3')
         self.o = self.observations[29]
         print(self.o.date, "<-- okay, that's it")
         self.vmf_coeffs = find_VMF_coeffs(td_path+'ah02010.h00', td_path+'aw02010.h00', ecef2lla(self.apriori_coords))

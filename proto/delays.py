@@ -3,7 +3,7 @@
 from datetime import datetime
 from math import sin, cos, exp, pi, radians, floor
 
-from gtime import GTime
+from .gtime import GTime
 
 __author__ = 'kirienko'
 
@@ -117,8 +117,8 @@ if __name__ == "__main__":
     vmf_coeffs = (0.00121328, 0.00043331)
     for h in range(10):
         saa_ = tropmodel(pos, azel, 0.1 * h)
-        print "Relative humidity: %2d %% \t delay: %.3f meters" % (h * 10, saa_)
+        print("Relative humidity: %2d %% \t delay: %.3f meters" % (h * 10, saa_))
     for h in range(90, 0, -10):
         saa_ = tropmodel(pos, radians(h), 50)
         vmf_ = sum(vmf(pos, t, radians(h),  vmf_coeffs))
-        print "Elevation angle: %2d° \t Delays [m]: Saastamoinen: %.3f, VMF1: %.3f" % (h, saa_, vmf_)
+        print("Elevation angle: %2d° \t Delays [m]: Saastamoinen: %.3f, VMF1: %.3f" % (h, saa_, vmf_))

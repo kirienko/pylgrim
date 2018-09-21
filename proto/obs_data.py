@@ -1,10 +1,12 @@
 #!/usr/bin/python
 # ! encoding: UTF8
-__author__ = 'kirienko'
+from __future__ import absolute_import
 
 import re
-from gtime import GTime
+from .gtime import GTime
 from math import ceil
+
+__author__ = 'kirienko'
 
 c = 299792428  # speed of light
 nu_1_G, nu_2_G = 1575.42e6, 1227.6e6  # GPS L1 and L2 frequencies
@@ -25,18 +27,18 @@ class ObsGPS:
             self.raw_data.remove(self.raw_data[1])
         if lpo > 1:
             tmp = self.raw_data[1:]
-            concatenated = [''.join(tmp[j:j+lpo]) for j in xrange(0,len(tmp),lpo)]
+            concatenated = [''.join(tmp[j:j+lpo]) for j in range(0,len(tmp),lpo)]
             self.raw_data = [self.raw_data[0]] + concatenated
         self.sat_types = self.raw_data[0][32:].strip().replace(' ', '0')
         # TODO: self.sat_types duplicates self.PRN_number, so do we need this?
-        self.PRN_number = [self.sat_types[i * 3:(i + 1) * 3] for i in xrange(self.sat_count)]
+        self.PRN_number = [self.sat_types[i * 3:(i + 1) * 3] for i in range(self.sat_count)]
 
         # Time of the observation       TODO: move to helper file
         str_date = data[0].split()[:6]
         if int(str_date[0]) < 2000:
             str_date[0] = '20' + str_date[0]
         sec_msec = float(str_date[-1])
-        self.date = GTime(*(map(int, str_date[:-1]) + [sec_msec]))
+        self.date = GTime(*(list(map(int, str_date[:-1])) + [sec_msec]))
 
         # Pseudoranges etc
 
@@ -47,7 +49,7 @@ class ObsGPS:
             :param i: number of a column
             :return:
             """
-            return [matr[j][16 * i:16 * i + 14] for j in xrange(len(matr))]
+            return [matr[j][16 * i:16 * i + 14] for j in range(len(matr))]
 
         def is_def(x):
             if isfloat.match(x):

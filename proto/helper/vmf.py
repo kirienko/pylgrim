@@ -122,8 +122,8 @@ def find_VMF_coeffs(ah_file, aw_file, coords):
         lat_range = header[0], header[1]
         lon_range = header[2], header[3]
         grid = header[4], header[5]
-        lat_len = abs(lat_range[0] - lat_range[1])/grid[0] + 1
-        lon_len = abs(lon_range[0] - lon_range[1])/grid[1] + 1
+        lat_len = int(abs(lat_range[0] - lat_range[1])/grid[0] + 1)
+        lon_len = int(abs(lon_range[0] - lon_range[1])/grid[1] + 1)
         values = values.reshape((lat_len, lon_len))
 
         if abs(lat_range[0] - lat_range[1]) < 180 or \

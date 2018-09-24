@@ -24,10 +24,10 @@ class TestParse_rinex(TestCase):
 
     # TODO: implement the rest:
     def test_parse_rinex_gps_nav(self):
-        TestCase.fail()
+        self.fail("test for parsing rinex_gps_nav is not implemented")
 
     def test_parse_rinex_obs(self):
-        TestCase.fail()
+        self.fail("test for parsing rinex_obs is not implemented")
 
     def test_parse_rinex_sp3(self):
         precise = parse_sp3('igs11484.sp3')

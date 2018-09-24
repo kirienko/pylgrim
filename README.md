@@ -11,7 +11,7 @@ Project Contents:
     + visualization/ -- visualization tools
 * test_data/ -- supplementary data files for tests
 
-What works:
+What works: [![Build Status](https://travis-ci.org/kirienko/pylgrim.svg?branch=python3)](https://travis-ci.org/kirienko/pylgrim)
 ----------
 For now one can obtain rover's position by using single- or dual-frequency
  observations, with accuracy of 50-100 meters. For static observations with GPS.
@@ -33,14 +33,13 @@ For now one can obtain rover's position by using single- or dual-frequency
 
 Dependencies:
 ------------
-* python 2.7
+* python 3.4
 * numpy
 * [optional] matplotlib.pyplot -- sats and rover visualization
-* [optional] mpl_toolkits -- satellite visualization
-* [optional] mpl_toolkits.basemap-data -- rover on the map
 
 Maybe some day:
 --------------
+* `juputer` notebook interface
 * GPS and GLONASS with 10 meter accuracy
 * moving rover
 * phase ambiguity

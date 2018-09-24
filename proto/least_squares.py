@@ -147,11 +147,11 @@ def least_squares(obs, navs, init_pos='', vmf_coeffs=()):
 
 if __name__ == "__main__":
     filename = 'test.'
-    nav_file = '../test_data/%sn' % filename
-    glo_file = '../test_data/%sg' % filename
-    obs_file = '../test_data/%so' % filename
-    obs_file = '../test_data/out.o'
-    # obs_file = '../test_data/test.o.full'
+    nav_file = '../data/%sn' % filename
+    glo_file = '../data/%sg' % filename
+    obs_file = '../data/%so' % filename
+    obs_file = '../data/out.o'
+    # obs_file = '../data/test.o.full'
 
     # Process Nav file:
     # ``navigations`` is a dict with

@@ -1,3 +1,4 @@
+import os
 from numpy import array, sqrt
 from random import choice
 from unittest import TestCase
@@ -24,7 +25,10 @@ class TestNavGPS(TestCase):
     """
 
     def setUp(self):
-        nav_file = '../../test_data/epgga2.010'
+        path = os.getcwd()
+        if not os.path.basename(path) == 'data':
+            os.chdir(os.path.join(path, 'proto', 'tests', 'data'))
+        nav_file = 'epgga2.010'
         navigations = parse_rinex(nav_file)
 
         self.t = 346500     # seconds from epoch
@@ -44,8 +48,10 @@ class TestNavGPS(TestCase):
 
 class TestNavGLO(TestCase):
     def setUp(self):
-        # nav_file = '../../test_data/test.g'
-        nav_file = '../../test_data/log_000.15g'
+        path = os.getcwd()
+        if not os.path.basename(path) == 'data':
+            os.chdir(os.path.join(path, 'proto', 'tests', 'data'))
+        nav_file = 'log_000.15g'
         navigations = parse_rinex(nav_file)
         sats = [k for k, v in navigations.items() if len(v) > 1]   # list of possible satellites
         sat = choice(sats)  # choose one satellite randomly

@@ -1,4 +1,5 @@
 #! encoding: utf8
+import os
 from datetime import datetime
 from numpy import deg2rad
 from numpy.testing import assert_allclose
@@ -9,11 +10,14 @@ from proto.helper.vmf import find_VMF_coeffs, vmf
 
 class TestVmf(TestCase):
     def setUp(self):
+        td_path = os.path.join(os.getcwd())
+        if not os.path.basename(td_path) == 'data':
+            os.chdir(os.path.join(td_path, 'proto', 'tests', 'data'))
         self.boehm_time = datetime(2008, 3, 19, 0, 0)
         self.boehm_pos_deg = (46, 15, 1000)
         self.boehm_pos_rad = (deg2rad(46), deg2rad(15), 1000)
-        self.ahf = "../../test_data/ah08079.h00"   # ah = 0.00121328
-        self.awf = "../../test_data/aw08079.h00"   # aw = 0.00043331
+        self.ahf = "ah08079.h00"   # ah = 0.00121328
+        self.awf = "aw08079.h00"   # aw = 0.00043331
         self.boehm_coeffs = (10.1804, 10.9260)
         self.cfs = find_VMF_coeffs(self.ahf, self.awf, self.boehm_pos_deg)
 

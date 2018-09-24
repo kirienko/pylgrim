@@ -1,11 +1,17 @@
 from unittest import TestCase, main
 from proto.helper.ionex import parse_ionex
 import datetime as dt
+import os
 
 
 class TestParse_ionex(TestCase):
+    def setUp(self):
+        path = os.getcwd()
+        if not os.path.basename(path) == 'data':
+            os.chdir(os.path.join(path, 'proto', 'tests', 'data'))
+
     def test_parse_ionex(self):
-        ionex = "../../test_data/iter_0/igsg0010.16i"
+        ionex = "igsg0010.16i"
         M = parse_ionex(ionex)
         dttimes = [dt.datetime(2016, 1, 1, x, 00) for x in range(24)]
         p = (60.1, 30.1)

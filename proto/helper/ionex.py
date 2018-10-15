@@ -23,15 +23,17 @@ class IonexMap:
         self.lats = np.array([])
         for j, line in enumerate(data[1:]):
             if "LAT" in line:
-                lat, lon1, lon2, dlon, h = map(float, [line[x:x + 6] for x in range(2, 32, 6)])
+                lat, lon1, lon2, dlon, h = map(float, [line[x:x + 6] for x in
+                                                       range(2, 32, 6)])
                 self.lats = np.append(self.lats, lat)
                 row_length = (lon2 - lon1) / dlon + 1  # total number of values of longitudes
                 next_lines_with_numbers = int(np.ceil(row_length / 16))
                 elems_in_row = [min(16, int(row_length - i * 16)) for i in range(next_lines_with_numbers)]
                 row = np.array([], dtype='int16')
                 for i, elem in enumerate(elems_in_row):
-                    row = np.append(row, np.array(map(int, [data[j + 2 + i][5 * x:5 * x + 5] for x in range(elem)]),
-                                                  dtype='int16'))
+                    row = np.append(row, np.array(list(map(int, [
+                        data[j + 2 + i][5 * x:5 * x + 5] for x in
+                        range(elem)])), dtype='int16'))
                 if len(self.grid_TEC) > 0:
                     self.grid_TEC = np.vstack((self.grid_TEC, row))
                 else:

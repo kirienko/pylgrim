@@ -68,8 +68,8 @@ class TestNavGLO(TestCase):
         :param x: array of length N
         :return: array of length N-1 of the middles between elements of x
         """
-        return map(lambda z: z[0].date + ((z[1].date - z[0].date) / 2),
-                   zip(x[:-1], x[1:]))
+        return list(map(lambda z: z[0].date + ((z[1].date - z[0].date) / 2),
+                   zip(x[:-1], x[1:])))
 
     def test_eph2pos(self):
         dt = self.middle(self.navs)

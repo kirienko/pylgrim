@@ -20,7 +20,7 @@ For now one can obtain rover's position by using single- or dual-frequency
  Sorry, guys, I have no time for UI at the moment.)
 
 + There are parsers for the following:
-    * RINEX (both with navigation data and observations)
+    * RINEX v2.11 (both with navigation data and observations)
     * SP3 -- precise orbits and clocks
     * IONEX ionospheric maps
     * Vienna mapping function sources: hydrostatic and wet coefficients (see [here](http://unb-vmf1.gge.unb.ca/Products.html))

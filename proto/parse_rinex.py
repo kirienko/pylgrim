@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# ! encoding: UTF8
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -20,7 +18,8 @@ def parse_rinex(path):
     """
     Parse RINEX-file and returns a timeline, i.e. array of tuples
         (time_of_event, Object_instance),
-    where Object_instance is either Nav or Observ depending on the type of RINEX file (detected automatically).
+    where Object_instance is either Nav or Observ depending on the type of
+    RINEX file (detected automatically).
     :param path: path to RINEX file
     :return: timeline
     """

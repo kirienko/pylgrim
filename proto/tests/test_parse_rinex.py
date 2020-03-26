@@ -1,5 +1,3 @@
-#! encoding: utf8
-
 import datetime as dt
 import os
 from unittest import TestCase, main
@@ -13,6 +11,7 @@ class TestParse_rinex(TestCase):
             os.chdir(os.path.join(td_path, 'proto', 'tests', 'data'))
 
     def test_parse_rinex_glo_nav(self):
+        """ Test GLONASS RINEX file """
         navigations = parse_rinex('log_000.15g')
         g = navigations['R03']
         z1, z2 = sorted([g[0], g[1]], key=lambda x: x.date)
@@ -24,6 +23,7 @@ class TestParse_rinex(TestCase):
 
     # TODO: implement the rest:
     def test_parse_rinex_gps_nav(self):
+        """ Test GPS RINEX file """
         self.fail("test for parsing rinex_gps_nav is not implemented")
 
     def test_parse_rinex_obs(self):

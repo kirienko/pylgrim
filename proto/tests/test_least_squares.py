@@ -11,8 +11,8 @@ from proto.coord.ecef import ecef_to_lat_lon_alt as ecef2lla
 
 class TestLeast_squares(TestCase):
     """
-        Test case from here: http://web.ics.purdue.edu/~ecalais/teaching/gps_geodesy/lab_6.pdf
-        """
+    Test case from here: http://web.ics.purdue.edu/~ecalais/teaching/gps_geodesy/lab_6.pdf  # noqa
+    """
     def setUp(self):
         td_path = os.path.join(os.getcwd(), 'proto', 'tests', 'data')
         os.chdir(td_path)
@@ -21,7 +21,8 @@ class TestLeast_squares(TestCase):
         self.sp3s = parse_sp3('igs11484.sp3')
         self.o = self.observations[29]
         print(self.o.date, "<-- okay, that's it")
-        self.vmf_coeffs = find_VMF_coeffs('ah02010.h00', 'aw02010.h00', ecef2lla(self.apriori_coords))
+        self.vmf_coeffs = find_VMF_coeffs('ah02010.h00', 'aw02010.h00',
+                                          ecef2lla(self.apriori_coords))
         # self.vmf_coeffs = (0.00122794, 0.00046177)
         print("VMF coefficients:", self.vmf_coeffs)
 

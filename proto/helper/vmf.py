@@ -96,6 +96,7 @@ from datetime import datetime
 --------------------------------------------------------------------- 
 """
 
+
 def round_to_grid(number, base):
     return int(base * round(float(number)/base))
 

@@ -1,7 +1,7 @@
 import os
 from numpy import array, sqrt
 from random import choice
-from unittest import TestCase
+from unittest import TestCase, skip
 from numpy.testing import assert_allclose
 from proto.nav_data import *
 from proto.nav_data import def_leap
@@ -42,6 +42,7 @@ class TestNavGPS(TestCase):
         assert_allclose(XYZ, self.right_pos, rtol=1e-6)
         assert_allclose(dist, 0., atol=1e-2)
 
+    @skip("Not implemented")
     def test_utc2gps(self):
         self.fail("utc2gps test is not implemented")
 

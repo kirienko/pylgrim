@@ -1,6 +1,6 @@
 import datetime as dt
 import os
-from unittest import TestCase, main
+from unittest import TestCase, main, skip
 from proto.parse_rinex import parse_rinex, parse_sp3
 
 
@@ -22,10 +22,12 @@ class TestParse_rinex(TestCase):
                                    places=10)
 
     # TODO: implement the rest:
+    @skip("Not implemented")
     def test_parse_rinex_gps_nav(self):
         """ Test GPS RINEX file """
         self.fail("test for parsing rinex_gps_nav is not implemented")
 
+    @skip("Not implemented")
     def test_parse_rinex_obs(self):
         self.fail("test for parsing rinex_obs is not implemented")
 
